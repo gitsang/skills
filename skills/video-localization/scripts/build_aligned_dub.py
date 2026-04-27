@@ -9,7 +9,14 @@ import tempfile
 import wave
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
+
+if TYPE_CHECKING:
+    import numpy as np  # type: ignore[import-untyped]
+
+
+# numpy is imported lazily in main() to allow --help without numpy installed.
+# TYPE_CHECKING guard lets type checkers resolve np.ndarray without a runtime import.
 
 
 @dataclass
@@ -31,7 +38,7 @@ class QwenVoiceCloneModel(Protocol):
         x_vector_only_mode: bool = False,
         non_streaming_mode: bool = False,
         **kwargs: object,
-    ) -> tuple[list[Any], int]: ...
+    ) -> tuple[list[np.ndarray], int]: ...
 
 
 def parse_args() -> argparse.Namespace:
@@ -40,13 +47,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--srt", type=Path, required=True, help="Source SRT path")
     parser.add_argument(
+        "--tgt-segments",
         "--target-segments",
         "--translated-segments",
-        "--tgt-segments",
-        dest="target_segments",
+        dest="tgt_segments",
         type=Path,
         required=True,
-        help="Per-segment target-language script path",
+        help="Per-segment target-language script path (one line per SRT block)",
     )
     parser.add_argument("--video", type=Path, required=True, help="Source video path")
     parser.add_argument(
@@ -130,11 +137,11 @@ def parse_srt(path: Path) -> list[tuple[int, float, float, str]]:
     return parsed
 
 
-def read_segments(srt_path: Path, target_segments_path: Path) -> list[SubtitleSegment]:
+def read_segments(srt_path: Path, tgt_segments_path: Path) -> list[SubtitleSegment]:
     source_segments = parse_srt(srt_path)
     target_lines = [
         line.rstrip("\n")
-        for line in target_segments_path.read_text(encoding="utf-8").splitlines()
+        for line in tgt_segments_path.read_text(encoding="utf-8").splitlines()
     ]
     if len(target_lines) != len(source_segments):
         raise SystemExit(
@@ -187,14 +194,16 @@ def synthesize_qwen_segment(
     model: QwenVoiceCloneModel,
 ) -> None:
     soundfile = importlib.import_module("soundfile")
-    wavs, sample_rate = model.generate_voice_clone(
+    kwargs: dict[str, Any] = dict(
         text=text,
-        language=language,
         ref_audio=str(reference_audio),
         ref_text=reference_text,
         x_vector_only_mode=x_vector_only,
         non_streaming_mode=True,
     )
+    if language is not None:
+        kwargs["language"] = language
+    wavs, sample_rate = model.generate_voice_clone(**kwargs)
     soundfile.write(str(wav_output_path), wavs[0], sample_rate)
 
 
@@ -236,10 +245,10 @@ def synthesize_with_selected_backend(
 def load_qwen_model(model_id: str) -> QwenVoiceCloneModel:
     torch = importlib.import_module("torch")
     qwen_tts_module = importlib.import_module("qwen_tts")
-    qwen_model = getattr(qwen_tts_module, "Qwen3TTSModel")
+    qwen_model_cls = getattr(qwen_tts_module, "Qwen3TTSModel")
     device_map = "cuda:0" if torch.cuda.is_available() else "cpu"
     dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
-    return qwen_model.from_pretrained(model_id, device_map=device_map, dtype=dtype)
+    return qwen_model_cls.from_pretrained(model_id, device_map=device_map, dtype=dtype)
 
 
 def mp3_to_wav(src: Path, dst: Path, sample_rate: int) -> None:
@@ -263,7 +272,7 @@ def mp3_to_wav(src: Path, dst: Path, sample_rate: int) -> None:
     )
 
 
-def read_wav_as_float(path: Path, sample_rate: int) -> Any:
+def read_wav_as_float(path: Path, sample_rate: int) -> np.ndarray:
     np = importlib.import_module("numpy")
     with wave.open(str(path), "rb") as wav_file:
         channels = wav_file.getnchannels()
@@ -277,7 +286,7 @@ def read_wav_as_float(path: Path, sample_rate: int) -> Any:
     return np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
 
 
-def write_wav_from_float(path: Path, samples: Any, sample_rate: int) -> None:
+def write_wav_from_float(path: Path, samples: np.ndarray, sample_rate: int) -> None:
     np = importlib.import_module("numpy")
     clipped = np.clip(samples, -1.0, 1.0)
     pcm = (clipped * 32767.0).astype(np.int16)
@@ -339,7 +348,7 @@ def main() -> None:
     ):
         raise SystemExit("--reference-text is required unless --x-vector-only is set")
 
-    segments = read_segments(args.srt, args.target_segments)
+    segments = read_segments(args.srt, args.tgt_segments)
     args.segment_dir.mkdir(parents=True, exist_ok=True)
     args.wav_out.parent.mkdir(parents=True, exist_ok=True)
     args.report_out.parent.mkdir(parents=True, exist_ok=True)

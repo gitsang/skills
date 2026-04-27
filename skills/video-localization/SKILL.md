@@ -1,9 +1,9 @@
 ---
-name: video-localization-5
+name: video-localization
 description: Use when localizing a single YouTube, web, or local video into another language with translated dubbing, sentence-level alignment, bilingual subtitles, final deliverables, or authorized reference-audio voice cloning.
 ---
 
-# Video Localization 5
+# Video Localization
 
 ## Overview
 
@@ -153,6 +153,7 @@ Reference audio should be single-speaker, low-noise, 3-15 seconds, no music/cros
 - Produce standalone subtitles before deciding whether to burn them into video.
 - Bilingual subtitles must reuse source SRT timing and pair each source block with its matching target-language segment.
 - Distinguish external subtitles, hard subtitles, and soft subtitles in the report.
+- Name subtitle files with `{lang_pair}` (e.g. `subtitles.en-zh.ass`) so multiple language pairs can coexist without filename collision.
 
 ### 9. Compose final video
 
@@ -163,6 +164,7 @@ Reference audio should be single-speaker, low-noise, 3-15 seconds, no music/cros
 ### 10. Package and report
 
 - Copy the clean video, subtitle file, and burned subtitle version to `output/` using user-requested names.
+- Use `{lang_pair}` in subtitle and bilingual video names; use `{tgt_lang}` in the clean dubbed video name.
 - `report.md` must describe only commands and artifacts that actually ran in the current environment.
 - Include limitations: transcription quality, TTS backend, voice-clone reference quality, speed-up/truncation, network/model constraints.
 
@@ -184,57 +186,68 @@ Common commands:
 ```bash
 python scripts/transcribe_with_faster_whisper.py \
   --audio source/audio.mp3 \
-  --txt-out artifacts/transcript.en.txt \
-  --srt-out artifacts/transcript.en.srt \
-  --language en
+  --txt-out artifacts/transcript.{src_lang}.txt \
+  --srt-out artifacts/transcript.{src_lang}.srt \
+  --language {src_lang}
 
 python scripts/scaffold_rewrite_prompt.py \
-  --transcript artifacts/transcript.en.txt \
-  --output artifacts/script.zh.txt \
-  --source-lang English \
-  --target-lang Chinese \
+  --transcript artifacts/transcript.{src_lang}.txt \
+  --output artifacts/script.{tgt_lang}.txt \
+  --source-lang <SourceLanguageName> \
+  --target-lang <TargetLanguageName> \
   --mode continuous
 
 python scripts/generate_edge_tts.py \
-  --script artifacts/script.zh.txt \
-  --voice zh-CN-XiaoxiaoNeural \
-  --mp3-out artifacts/narration.zh.mp3 \
-  --wav-out artifacts/narration.zh.wav
+  --script artifacts/script.{tgt_lang}.txt \
+  --voice <voice-id-for-{tgt_lang}> \
+  --mp3-out artifacts/narration.{tgt_lang}.mp3 \
+  --wav-out artifacts/narration.{tgt_lang}.wav
 
 python scripts/build_aligned_dub.py \
-  --srt artifacts/transcript.en.srt \
-  --target-segments artifacts/script.zh.segments.txt \
+  --srt artifacts/transcript.{src_lang}.srt \
+  --tgt-segments artifacts/script.{tgt_lang}.segments.txt \
   --video source/video.mp4 \
   --backend edge-tts \
-  --voice zh-CN-XiaoxiaoNeural \
-  --wav-out artifacts/narration.zh.aligned.wav \
-  --report-out artifacts/narration.zh.aligned.json \
+  --voice <voice-id-for-{tgt_lang}> \
+  --wav-out artifacts/narration.{tgt_lang}.aligned.wav \
+  --report-out artifacts/narration.{tgt_lang}.aligned.json \
   --segment-dir artifacts/aligned-segments
 
 python scripts/build_bilingual_ass.py \
-  --srt artifacts/transcript.en.srt \
-  --target-segments artifacts/script.zh.segments.txt \
-  --ass-out artifacts/subtitles.en-zh.ass
+  --srt artifacts/transcript.{src_lang}.srt \
+  --tgt-segments artifacts/script.{tgt_lang}.segments.txt \
+  --lang-pair {src_lang}-{tgt_lang} \
+  --ass-out artifacts/subtitles.{src_lang}-{tgt_lang}.ass
 ```
 
 Voice-cloned aligned dubbing:
 
 ```bash
+python scripts/generate_qwen3_voice_clone.py \
+  --script artifacts/script.{tgt_lang}.txt \
+  --reference-audio source/reference.wav \
+  --reference-text source/reference.txt \
+  --language <TargetLanguageName> \
+  --mp3-out artifacts/narration.{tgt_lang}.clone.mp3 \
+  --wav-out artifacts/narration.{tgt_lang}.clone.wav
+
 python scripts/build_aligned_dub.py \
-  --srt artifacts/transcript.en.srt \
-  --target-segments artifacts/script.zh.segments.txt \
+  --srt artifacts/transcript.{src_lang}.srt \
+  --tgt-segments artifacts/script.{tgt_lang}.segments.txt \
   --video source/video.mp4 \
   --backend qwen3-tts \
   --reference-audio source/reference.wav \
   --reference-text source/reference.txt \
-  --target-language Chinese \
+  --language <TargetLanguageName> \
   --model-id ../models/Qwen3-TTS-12Hz-0.6B-Base \
   --segment-dir artifacts/aligned-segments-clone \
-  --wav-out artifacts/narration.zh.clone.aligned.wav \
-  --report-out artifacts/narration.zh.clone.aligned.json
+  --wav-out artifacts/narration.{tgt_lang}.clone.aligned.wav \
+  --report-out artifacts/narration.{tgt_lang}.clone.aligned.json
 ```
 
-Scripts accept compatibility aliases from earlier versions: `--translated-segments`, `--target-segments`, and `--tgt-segments`; `--language`, `--target-lang`, and `--target-language`; `--source-lang` and `--source-language`.
+Scripts accept compatibility aliases: `--translated-segments`, `--target-segments`, and `--tgt-segments`; `--language`, `--target-lang`, and `--target-language`; `--source-lang` and `--source-language`.
+
+> **Note**: `--source-lang` / `--target-lang` / `--language` for `scaffold_rewrite_prompt.py` and `generate_qwen3_voice_clone.py` accept language **names** (e.g. `English`, `Chinese`, `French`). `--language` for `transcribe_with_faster_whisper.py` and `build_aligned_dub.py` accepts ISO 639-1 **codes** (e.g. `en`, `zh`, `fr`).
 
 ## Minimal Toolchain
 
@@ -259,6 +272,7 @@ Tesla P4 note: P4 compute capability is 6.1 and may require Python 3.12 plus `to
 | Qwen model download fails on Hugging Face | Prefer ModelScope and create a symlink if `.` becomes `___` in the local directory name. |
 | Current Python too new for GPU PyTorch | Create a Python 3.12/3.11 virtualenv; do not pollute system Python. |
 | `qwen-tts` upgrades PyTorch incompatibly | Install verified PyTorch first, then install `qwen-tts --no-deps` and add dependencies based on import errors. |
+| `SoX could not be found` warning | Determine whether it blocks execution; if synthesis continues, log the limitation and proceed. |
 | TTS backend does not support target language | Choose a backend/voice that supports `{tgt_lang}`; failed pronunciation or silence is not completion. |
 | Voice clone does not match reference | Re-check single speaker, 3-15 s duration, no music/reverb/crosstalk, exact reference text. |
 | Final duration correct but sentences drift | Rebuild per-segment audio anchored to SRT starts; total-duration alignment is insufficient. |
@@ -287,6 +301,6 @@ Do not claim completion if any are true:
 - [ ] Key commands are written to `notes/commands.md`.
 - [ ] Blockers, fallbacks, quality limits, and authorization notes are written to `notes/issues.md` or `report.md`.
 - [ ] If sentence-level sync was requested, timing report records speed-up/truncation.
-- [ ] If voice cloning was used, reference source, quality, text, and authorization are recorded.
+- [ ] If voice cloning was used, reference audio source, quality, reference text, and **authorization** are recorded in `notes/issues.md` or `report.md`.
 - [ ] Final MP4 passed `ffprobe` video/audio stream verification.
 - [ ] All requested final filenames and subtitle formats exist in `output/`.

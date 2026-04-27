@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import importlib
+import json
 import subprocess
 from pathlib import Path
 
@@ -45,7 +46,12 @@ def main() -> None:
 
     asyncio.run(synthesize(text, args.voice, args.rate, args.mp3_out))
     convert_to_wav(args.mp3_out, args.wav_out)
-    print({"mp3": str(args.mp3_out), "wav": str(args.wav_out), "voice": args.voice})
+    print(
+        json.dumps(
+            {"mp3": str(args.mp3_out), "wav": str(args.wav_out), "voice": args.voice},
+            ensure_ascii=False,
+        )
+    )
 
 
 if __name__ == "__main__":

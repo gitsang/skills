@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import json
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -114,14 +115,19 @@ def main() -> None:
     )
     convert_to_mp3(args.wav_out, args.mp3_out, sample_rate or args.sample_rate)
     print(
-        {
-            "reference_audio": str(args.reference_audio),
-            "reference_text": str(args.reference_text) if args.reference_text else None,
-            "language": args.language,
-            "x_vector_only": args.x_vector_only,
-            "mp3": str(args.mp3_out),
-            "wav": str(args.wav_out),
-        }
+        json.dumps(
+            {
+                "reference_audio": str(args.reference_audio),
+                "reference_text": str(args.reference_text)
+                if args.reference_text
+                else None,
+                "language": args.language,
+                "x_vector_only": args.x_vector_only,
+                "mp3": str(args.mp3_out),
+                "wav": str(args.wav_out),
+            },
+            ensure_ascii=False,
+        )
     )
 
 

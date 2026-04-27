@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import json
 from pathlib import Path
 
 
@@ -86,13 +87,16 @@ def main() -> None:
             output_index += 1
 
     print(
-        {
-            "language": info.language,
-            "duration": info.duration,
-            "segments": len(segment_list),
-            "txt_out": str(args.txt_out),
-            "srt_out": str(args.srt_out),
-        }
+        json.dumps(
+            {
+                "language": info.language,
+                "duration": info.duration,
+                "segments": len(segment_list),
+                "txt_out": str(args.txt_out),
+                "srt_out": str(args.srt_out),
+            },
+            ensure_ascii=False,
+        )
     )
 
 

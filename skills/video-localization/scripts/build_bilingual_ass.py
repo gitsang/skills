@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 
@@ -26,19 +27,30 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--srt", type=Path, required=True, help="Source SRT path")
     parser.add_argument(
+        "--tgt-segments",
         "--target-segments",
         "--translated-segments",
-        "--tgt-segments",
-        dest="target_segments",
+        dest="tgt_segments",
         type=Path,
         required=True,
         help="Per-segment target-language script path",
     )
     parser.add_argument("--ass-out", type=Path, required=True, help="ASS output path")
     parser.add_argument(
+        "--lang-pair",
+        default=None,
+        help=(
+            "Language pair code used in the output filename (e.g. en-zh, fr-de). "
+            "Informational only; does not affect subtitle content."
+        ),
+    )
+    parser.add_argument(
         "--font-name",
-        default="Noto Sans CJK SC",
-        help="Font name; choose a CJK-capable font for Chinese/Japanese/Korean",
+        default="Sans",
+        help=(
+            "Font name. Use a CJK-capable font (e.g. 'Noto Sans CJK SC') "
+            "when target or source language is Chinese, Japanese, or Korean."
+        ),
     )
     parser.add_argument("--font-size", type=int, default=36, help="Base font size")
     parser.add_argument(
@@ -110,7 +122,7 @@ def main() -> None:
     srt_entries = parse_srt_blocks(args.srt)
     target_lines = [
         line.rstrip("\n")
-        for line in args.target_segments.read_text(encoding="utf-8").splitlines()
+        for line in args.tgt_segments.read_text(encoding="utf-8").splitlines()
     ]
     if len(srt_entries) != len(target_lines):
         raise SystemExit(
@@ -142,7 +154,16 @@ def main() -> None:
 
     args.ass_out.parent.mkdir(parents=True, exist_ok=True)
     args.ass_out.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(args.ass_out)
+    print(
+        json.dumps(
+            {
+                "ass_out": str(args.ass_out),
+                "lang_pair": args.lang_pair,
+                "blocks": len(srt_entries),
+            },
+            ensure_ascii=False,
+        )
+    )
 
 
 if __name__ == "__main__":
