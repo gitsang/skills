@@ -13,19 +13,25 @@ Personal agent skills that can be installed from this GitHub repository with the
 Install a skill from this repository with:
 
 ```bash
-npx skills add https://github.com/gitsang/skills/tree/main/skills/clip
+npx skills add gitsang/skills --skill clip
 ```
 
 ```bash
-npx skills add https://github.com/gitsang/skills/tree/main/skills/procurement-analysis
+npx skills add gitsang/skills --skill procurement-analysis
 ```
 
 ```bash
-npx skills add https://github.com/gitsang/skills/tree/main/skills/video-localization
+npx skills add gitsang/skills --skill video-localization
+```
+
+Install all skills from this repository with:
+
+```bash
+npx skills add gitsang/skills
 ```
 
 Installed skills are copied into the agent skills directory, such as `.agents/skills/`.
 
 ## Notes
 
-Use `npx skills add <github-url>` for agent skills. The `npx skill` command is CodeBuddy-specific.
+Use `npx skills add <owner>/<repo> --skill <name>` for agent skills. The `npx skill` command is CodeBuddy-specific.
