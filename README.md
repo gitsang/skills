@@ -34,4 +34,4 @@ Installed skills are copied into the agent skills directory, such as `.agents/sk
 
 ## Notes
 
-Use `npx skills add <owner>/<repo> --skill <name>` for agent skills. The `npx skill` command is CodeBuddy-specific.
+Use `npx skills add <owner>/<repo> --skill <name>` for agent skills.
