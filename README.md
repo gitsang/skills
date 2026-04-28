@@ -1,6 +1,6 @@
 # Skills
 
-Personal agent skills that can be installed from this GitHub repository with the `skill` CLI.
+Personal agent skills that can be installed from this GitHub repository with the `skills` CLI.
 
 ## Available skills
 
@@ -10,24 +10,22 @@ Personal agent skills that can be installed from this GitHub repository with the
 
 ## Install from GitHub
 
-The current `npx skill` CLI accepts one package specifier and uses `SKILL_BASE_URL` to override the default skill repository.
-
 Install a skill from this repository with:
 
 ```bash
-SKILL_BASE_URL='https://github.com/gitsang/skills/tree/main' npx skill skills/clip
+npx skills add https://github.com/gitsang/skills/tree/main/skills/clip
 ```
 
 ```bash
-SKILL_BASE_URL='https://github.com/gitsang/skills/tree/main' npx skill skills/procurement-analysis
+npx skills add https://github.com/gitsang/skills/tree/main/skills/procurement-analysis
 ```
 
 ```bash
-SKILL_BASE_URL='https://github.com/gitsang/skills/tree/main' npx skill skills/video-localization
+npx skills add https://github.com/gitsang/skills/tree/main/skills/video-localization
 ```
 
-Installed skills are copied into the current project's `.codebuddy/skills/` directory.
+Installed skills are copied into the agent skills directory, such as `.agents/skills/`.
 
 ## Notes
 
-`npx skill add <github-url>` is not supported by the current CLI. Use `SKILL_BASE_URL` plus the package path instead.
+Use `npx skills add <github-url>` for agent skills. The `npx skill` command is CodeBuddy-specific.
