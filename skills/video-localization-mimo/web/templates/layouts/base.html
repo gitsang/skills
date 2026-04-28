@@ -1,0 +1,30 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Localization</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.0.6/css/pico.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body>
+    <nav class="container">
+        <ul>
+            <li><strong>🎬 Video Localization</strong></li>
+        </ul>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/settings">Settings</a></li>
+        </ul>
+    </nav>
+    <main class="container">
+        {{template "content" .}}
+    </main>
+    <footer class="container">
+        <p><small>Video Localization powered by MiMo AI</small></p>
+    </footer>
+</body>
+</html>
+{{end}}

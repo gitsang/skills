@@ -1,0 +1,139 @@
+.drop-zone {
+    border: 2px dashed var(--pico-muted-border-color);
+    border-radius: var(--pico-border-radius);
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.drop-zone:hover,
+.drop-zone.drag-over {
+    border-color: var(--pico-primary);
+    background: var(--pico-primary-focus);
+}
+
+.drop-zone input[type="file"] {
+    display: none;
+}
+
+.progress-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.progress-bar {
+    flex: 1;
+    height: 8px;
+    background: var(--pico-muted-border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-bar .fill {
+    height: 100%;
+    background: var(--pico-primary);
+    transition: width 0.3s ease;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25em 0.5em;
+    font-size: 0.875em;
+    border-radius: var(--pico-border-radius);
+}
+
+.badge.pending {
+    background: var(--pico-muted-color);
+    color: white;
+}
+
+.badge.running {
+    background: var(--pico-primary);
+    color: white;
+}
+
+.badge.completed {
+    background: var(--pico-green);
+    color: white;
+}
+
+.badge.failed {
+    background: var(--pico-red);
+    color: white;
+}
+
+.badge.cancelled {
+    background: var(--pico-orange);
+    color: white;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--pico-muted-border-color);
+}
+
+.step:last-child {
+    border-bottom: none;
+}
+
+.step-icon {
+    font-size: 1.2em;
+    min-width: 1.5rem;
+    text-align: center;
+}
+
+.step.completed .step-icon {
+    color: var(--pico-green);
+}
+
+.step.running .step-icon {
+    color: var(--pico-primary);
+    animation: spin 1s linear infinite;
+}
+
+.step.pending .step-icon {
+    color: var(--pico-muted-color);
+}
+
+.step.failed .step-icon {
+    color: var(--pico-red);
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.error {
+    color: var(--pico-red);
+    font-size: 0.875em;
+}
+
+#logs {
+    font-family: monospace;
+    font-size: 0.875em;
+    background: var(--pico-card-background-color);
+    padding: 1rem;
+    border-radius: var(--pico-border-radius);
+}
+
+#logs div {
+    padding: 0.25rem 0;
+    border-bottom: 1px solid var(--pico-muted-border-color);
+}
+
+footer {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--pico-muted-border-color);
+    text-align: center;
+}

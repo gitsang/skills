@@ -1,0 +1,109 @@
+{{template "base" .}}
+{{define "content"}}
+<nav>
+    <a href="/">← Back</a>
+    <code>{{.Task.ID}}</code>
+</nav>
+
+<article>
+    <header>
+        <h1>{{.Task.SourceVideo}}</h1>
+        <span class="badge {{.Task.Status}}">{{.Task.Status}}</span>
+    </header>
+
+    <div hx-get="/api/tasks/{{.Task.ID}}/progress" hx-trigger="every 1s" hx-swap="innerHTML">
+        {{template "progress" .Task}}
+    </div>
+</article>
+
+<article>
+    <h2>Steps</h2>
+    <div hx-get="/api/tasks/{{.Task.ID}}/steps" hx-trigger="every 2s" hx-swap="innerHTML">
+        {{template "step-list" .Task}}
+    </div>
+</article>
+
+<article>
+    <h2>Artifacts</h2>
+    <div hx-get="/api/tasks/{{.Task.ID}}/artifacts" hx-trigger="every 5s" hx-swap="innerHTML">
+        {{template "artifacts" .Task}}
+    </div>
+</article>
+
+<details>
+    <summary>Logs</summary>
+    <pre id="logs" hx-get="/api/tasks/{{.Task.ID}}/logs" hx-trigger="every 3s" hx-swap="beforeend" style="max-height: 300px; overflow-y: auto;">
+        Loading logs...
+    </pre>
+</details>
+
+<script>
+    const ws = new WebSocket(`ws://${location.host}/ws/{{.Task.ID}}`);
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'complete') {
+            location.reload();
+        }
+    };
+</script>
+{{end}}
+
+{{define "progress"}}
+<div class="progress-container">
+    <div class="progress-bar">
+        <div class="fill" style="width: {{.Progress}}%"></div>
+    </div>
+    <span>{{printf "%.0f" (mul .Progress 100)}}%</span>
+    {{if .CurrentStep}}
+    <small>Current: {{.CurrentStep}}</small>
+    {{end}}
+</div>
+{{end}}
+
+{{define "step-list"}}
+{{range .Steps}}
+<div class="step {{.Status}}">
+    <span class="step-icon">
+        {{if eq .Status "completed"}}✅{{end}}
+        {{if eq .Status "running"}}⏳{{end}}
+        {{if eq .Status "pending"}}⬜{{end}}
+        {{if eq .Status "failed"}}❌{{end}}
+    </span>
+    <span>{{.Name}}</span>
+    {{if .Error}}
+    <small class="error">{{.Error}}</small>
+    {{end}}
+</div>
+{{end}}
+{{end}}
+
+{{define "artifacts"}}
+{{if .Artifacts}}
+<table>
+    <thead>
+        <tr>
+            <th>File</th>
+            <th>Size</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{range .Artifacts}}
+        <tr>
+            <td>{{.Name}}</td>
+            <td>{{formatSize .Size}}</td>
+            <td><a href="/download/{{$.Task.ID}}/{{.Path}}" role="button" class="outline">Download</a></td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+{{else}}
+<p>No artifacts yet.</p>
+{{end}}
+{{end}}
+
+{{define "logs"}}
+{{range .Logs}}
+<div>{{.}}</div>
+{{end}}
+{{end}}
