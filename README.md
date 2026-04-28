@@ -6,6 +6,7 @@ Personal agent skills that can be installed from this GitHub repository with the
 
 - `skills/clip` - FFmpeg-based travel vlog clipping, stitching, audio mixing, and export workflow.
 - `skills/procurement-analysis` - Product/vendor comparison and procurement decision analysis workflow.
+- `skills/video-localization` - Single-video translation, dubbing, alignment, subtitles, and localized deliverables workflow.
 
 ## Install from GitHub
 
@@ -19,6 +20,10 @@ SKILL_BASE_URL='https://github.com/gitsang/skills/tree/main' npx skill skills/cl
 
 ```bash
 SKILL_BASE_URL='https://github.com/gitsang/skills/tree/main' npx skill skills/procurement-analysis
+```
+
+```bash
+SKILL_BASE_URL='https://github.com/gitsang/skills/tree/main' npx skill skills/video-localization
 ```
 
 Installed skills are copied into the current project's `.codebuddy/skills/` directory.
