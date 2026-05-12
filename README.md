@@ -5,6 +5,7 @@ Personal agent skills that can be installed from this GitHub repository with the
 ## Available skills
 
 - `skills/clip` - FFmpeg-based travel vlog clipping, stitching, audio mixing, and export workflow.
+- `skills/first-principles-design` - Concept-first software design workflow for converging expanding requirements into stable module boundaries and design documents.
 - `skills/procurement-analysis` - Product/vendor comparison and procurement decision analysis workflow.
 - `skills/video-localization` - Single-video translation, dubbing, alignment, subtitles, and localized deliverables workflow.
 
@@ -14,6 +15,10 @@ Install a skill from this repository with:
 
 ```bash
 npx skills add gitsang/skills --skill clip
+```
+
+```bash
+npx skills add gitsang/skills --skill first-principles-design
 ```
 
 ```bash
