@@ -7,7 +7,9 @@ description: Use when designing or revising software architecture, middleware bo
 
 把设计工作从“这个功能怎么做”提升到“这类需求到底属于什么概念”。
 
-核心原则：**先找稳定原语，再决定模块边界；先解释为什么，再写 YAML、接口或代码。**
+核心原则：**通过持续追问和多视角检验找到稳定原语，再决定模块边界；先解释为什么，再写 YAML、接口或代码。**
+
+这不是一次性产出设计结论的 skill。它要求 agent 主动和用户、subagent、team 成员来回交流，持续扩充场景、反例和边界条件，直到概念模型能解释已知需求，也能约束未来需求。
 
 ## When to Use
 
@@ -56,7 +58,30 @@ Do **not** use this for:
 - 代码库检索：找当前实现边界、配置样例、旧实现教训。
 - 外部模型检索：找类似系统的概念划分，例如 OPA、Envoy、Kubernetes admission、WAF、fail2ban。
 
-### 2. Extract first-principle primitives
+如果当前环境支持 subagent 或 team，不要只靠自己想：
+
+- 派一个代码库观察者找现有边界和历史包袱。
+- 派一个外部参考观察者找相似系统的概念模型。
+- 派一个反方观察者专门攻击你的合并/拆分方案。
+- 如果 team mode 可用，让不同成员分别扮演“产品使用者”“实现者”“运维者”“未来需求提出者”。
+
+每个代理都要被要求返回：场景、反例、命名风险、用户可能困惑的地方。不要只让他们总结文件。
+
+### 2. Expand scenarios through questions
+
+在提出方案前，至少问一轮场景问题。好的问题不是“你要 A 还是 B”，而是暴露边界：
+
+- “如果 action 以后不止 ban，这个名字还成立吗？”
+- “同一个能力如果能在两个地方配置，用户会怎么判断放哪里？”
+- “这个规则依赖的是请求前事实，还是响应后事实？”
+- “有没有一个反例会迫使我们把两个模块重新合并？”
+- “有没有一个未来动作会让当前命名失效？”
+
+问题要一轮一轮问。每轮只问最能改变设计方向的问题。用户回答后，更新概念模型，不要假装原方案一直正确。
+
+如果用户表达了担心，例如“会不会变成脚本系统”，把它当作设计约束，不是闲聊。
+
+### 3. Extract first-principle primitives
 
 把需求拆成少量稳定原语。常用问题：
 
@@ -70,7 +95,7 @@ action     做什么？allow、deny、ban、throttle、challenge、notify、mark
 
 如果这五个问题答不清楚，不要继续设计字段。
 
-### 3. Separate trigger reason from action
+### 4. Separate trigger reason from action
 
 模块边界按触发原因划分，不按 action 划分。
 
@@ -88,7 +113,20 @@ action     做什么？allow、deny、ban、throttle、challenge、notify、mark
 
 这不是职责重叠。职责由 trigger reason 决定。
 
-### 4. Decide what unifies and what stays typed
+### 5. Stress-test with divergent cases
+
+拿用户给出的需求和代理收集到的场景做压力测试：
+
+```text
+如果 action 增加一种，新模型是否仍然成立？
+如果 condition 增加一种，应该归到哪个控制类别？
+如果某个能力可在两个地方配置，是不是说明边界错了？
+如果删除一个模块，另一个模块是否会被迫承担不属于它的职责？
+```
+
+必须主动寻找会破坏当前设计的例子。找不到时，也要说明“目前未发现破坏性反例”，不要说“这个设计很完美”。
+
+### 6. Decide what unifies and what stays typed
 
 优先选择：
 
@@ -114,7 +152,7 @@ Many Unrelated Middlewares
 
 否则 subject 选择、matcher、counter、state、action 会到处重复，用户也会不知道能力该配在哪里。
 
-### 5. Name by domain, not by first action
+### 7. Name by domain, not by first action
 
 命名要能容纳未来合理扩展。
 
@@ -130,7 +168,13 @@ Bad:
 - `gatewayProtection`：太宽，容易变成筐。
 - `riskControl`：范围过大，容易吸收所有风控需求。
 
-### 6. Model phases explicitly
+命名要拿未来场景测试：
+
+- 如果 action 从 `ban` 变成 `throttle`，名字是否仍然成立？
+- 如果观察对象从失败变成所有响应状态，名字是否过窄？
+- 如果用户看到这个名字，能否知道配置该放这里还是放别处？
+
+### 8. Model phases explicitly
 
 很多设计混乱来自 phase 没说清楚。
 
@@ -147,7 +191,7 @@ postResponse: 观察 401/403/5xx，更新失败计数
 preRequest: 检查 ban/throttle/challenge 状态并执行
 ```
 
-### 7. Define ownership rules
+### 9. Define ownership rules
 
 用一组判断规则防止用户困惑：
 
@@ -167,7 +211,7 @@ preRequest: 检查 ban/throttle/challenge 状态并执行
 
 文档里必须写清楚：同一个 action 可以被多个控制类别使用，但 condition 的归属不能重复。
 
-### 8. Keep the first version bounded
+### 10. Keep the first version bounded
 
 设计可以给出长期概念，但第一版实现必须克制。
 
@@ -244,12 +288,51 @@ docs/design/<topic>.md
 完成前检查：
 
 - 是否有一个能解释未来需求的稳定原语模型？
+- 是否至少通过一轮用户追问扩充了场景或确认了边界？
+- 是否使用 subagent/team 或等价的多视角分析检查过反例？如果没有，是否说明问题足够简单？
 - 是否区分了 trigger reason 和 action？
 - 是否明确了 phase？
 - 是否解释了为什么不完全合并、也不完全拆散？
 - 是否给出了用户以后能用的职责归属规则？
 - 是否避免了“万能”“强大”“灵活”这类空话？
 - 是否有第一版边界，避免变成脚本系统？
+
+## Interaction Rules
+
+这个 skill 的关键不是“写出漂亮文档”，而是逼近正确概念。执行时必须保持交互：
+
+1. **先复述设计张力。** 例如：“这里的冲突不是 rateLimit 能不能作为 action，而是 baseline traffic policy 和 adaptive failure policy 是否混淆。”
+2. **每轮只问一个高价值问题。** 问能改变模块边界的问题，不问偏好题。
+3. **让用户的担心进入模型。** 用户说“怕变成脚本系统”，文档里就要有“不做脚本系统”的边界。
+4. **向 subagent/team 要反例。** 不要只要赞同意见。明确要求他们攻击当前命名、拆分和 phase 模型。
+5. **综合后再下结论。** 先列出发现，再给推荐，不要把推荐伪装成事实。
+6. **记录被放弃的方案。** 写清楚为什么不完全合并，为什么不完全拆散。
+
+### Useful Subagent / Team Prompts
+
+代码库观察者：
+
+```text
+CONTEXT: We are designing first-principles boundaries for <topic>.
+GOAL: Find existing module boundaries, naming patterns, config shapes, and historical complexity traps.
+REQUEST: Return concrete files, current concepts, overlaps, and constraints. Also list one naming or boundary risk.
+```
+
+反方观察者：
+
+```text
+CONTEXT: Current proposal is <summary>.
+GOAL: Break the proposal before we document it.
+REQUEST: Find scenarios where the proposed split confuses users, duplicates configuration, or collapses into a script system. Return counterexamples and a better boundary if you see one.
+```
+
+未来需求观察者：
+
+```text
+CONTEXT: We need a concept model that survives future feature requests.
+GOAL: Generate plausible next-year requirements.
+REQUEST: List 5 future requirements and test whether each fits the current primitives: phase, subject, condition, state, action.
+```
 
 ## Example Pattern
 
