@@ -5,138 +5,137 @@ description: Use when coordinating team-mode or multi-agent debate for design de
 
 # Team Debate
 
-把团队辩论当成**准入流程**，不是把多个代理意见拼成摘要。
+把团队辩论当作**准入流程**，不要把多个代理的意见直接拼成摘要。
 
-核心原则：**一次只辩论一个议题；每个议题至少两轮；每轮至少两个成员；结论及时落文档；未准入的内容必须明确降级、移除或改写。**
+核心原则：**一次只辩论一个议题；每个议题至少两轮；每轮至少两个成员；结论要及时写入文档；未准入的内容必须明确降级、移除或重写。**
 
-## When to Use
+## 何时使用
 
-Use this skill when any of these apply:
+当以下任一情况成立时，使用这个技能：
 
 - 用户要求“与团队成员充分辩论”“多视角评审”“核心概念必须辩论”。
-- 需要决定某条原则、架构边界、模块职责或设计命题是否准入。
-- team mode 可用，且需要 `team_*` 成员分别从不同视角输出观点。
+- 需要判断某条原则、架构边界、模块职责或设计命题是否准入。
+- 团队模式可用，并且需要 `team_*` 成员分别从不同视角输出观点。
 - 需要把辩论结论写入 `docs/design/*_debate.md` 或类似决策记录。
-- 需要区分“第一性原理 / 强制派生边界 / non-goal / 实现细节”。
+- 需要区分“第一性原理 / 强制派生边界 / 非目标 / 实现细节”。
 
-Do **not** use this for:
+不要用于：
 
 - 单点实现、格式修复、机械重命名。
 - 用户明确只要快速答案，不要过程。
 - 已经有明确决策，只需要执行。
 
-## What This Skill Prevents
+## 这个技能要避免什么
 
 常见失败模式：
 
-1. **打包辩论**：把 P1-P8 或多个架构问题一次性交给团队，导致每个结论都没有充分准入。
-2. **摘要代替裁决**：只汇总观点，不给 accept / rewrite / reject / downgrade。
-3. **降级被误读为可选**：把 mandatory derived boundary 写成“实现建议”。
-4. **成员输出缺轮次**：只有一轮，或第二轮没有回应第一轮分歧。
-5. **文档滞后**：辩论已闭合，但 `_debate.md` 和主设计文档没有同步更新。
-6. **实现泄漏进原则**：把 API、字段、Go 类型、存储、重试参数、UI 文案写成第一性原理。
-7. **不可用成员阻塞全局**：某个成员 errored 或未 claim，导致议题无法推进。
+1. **把多个议题打包辩论**：把 P1-P8 或多个架构问题一次性交给团队，导致每个结论都没有充分准入。
+2. **用摘要代替裁决**：只汇总观点，不给 `接受 / 重写 / 拒绝 / 降级`。
+3. **把降级误读成可选项**：把必须的派生边界写成“实现建议”。
+4. **成员输出缺少轮次**：只有一轮，或第二轮没有回应第一轮分歧。
+5. **文档滞后**：辩论已经闭合，但 `_debate.md` 和主设计文档没有同步更新。
+6. **实现细节渗入原则**：把 API、字段、Go 类型、存储、重试参数、UI 文案写成第一性原理。
+7. **不可用成员阻塞全局**：某个成员出错或未认领，导致议题无法推进。
 
-## Debate Contract
+## 辩论合同
 
-每个议题必须有清晰合同：
+每个议题都必须有清晰合同：
 
-```text
-Issue: 单一候选命题，不能夹带其他候选。
-Round 1: 至少两个成员独立判断。
-Round 2: 至少两个成员基于 Round 1 重新判断。
-Verdict: accept / rewrite / reject / downgrade 之一。
-Placement: 写入第一性原理、派生边界、non-goal、场景检验或移除。
-Wording: 给出最终可落文档措辞。
-Exclusions: 明确哪些实现细节不得进入该层级。
+```
+议题：单一候选命题，不能夹带其他候选。
+第 1 轮：至少两个成员独立判断。
+第 2 轮：至少两个成员基于第 1 轮重新判断。
+裁决：接受 / 重写 / 拒绝 / 降级 之一。
+放置位置：写入第一性原理、派生边界、非目标、场景检验或移除。
+措辞：给出最终可落文档措辞。
+排除项：明确哪些实现细节不得进入该层级。
 ```
 
 如果用户指定更高标准（例如每轮 3-4 个成员），以用户标准为准。
 
-## Team Setup
+## 团队配置
 
-### 1. Assign roles, not generic reviewers
+### 1. 分配角色，不要用泛化审稿人
 
-每个成员必须代表不同压力方向，例如：
+每个成员都必须代表不同压力方向，例如：
 
-- `runtime` / `gateway-runtime`：执行路径、性能、自治、故障降级。
-- `control-plane` / `manager-control-plane`：管理面状态、操作反馈、审计、用户视图。
+- `runtime` / `gateway-runtime`：执行路径、性能、自主性、故障降级。
+- `control-plane` / `manager-control-plane`：管理面状态、操作反馈、审计、用户视角。
 - `security` / `security-oidc`：凭据、OIDC、token、权限、攻击面。
-- `critic` / `first-principles-critic`：概念层级、是否泄漏实现、是否应降级。
+- `critic` / `first-principles-critic`：概念层级、是否泄漏实现、是否应该降级。
 
-不要让所有成员都回答同一个泛泛问题“怎么看”。给他们明确视角。
+不要让所有成员都回答同一个泛泛问题“怎么看”。要给他们明确视角。
 
-### 2. Use task descriptions with required output shape
+### 2. 用带有必要输出形状的团队任务描述
 
-每个 team task 都应包含：
+每个团队任务都应包含：
 
-```text
-Round: 第几轮。
-Single issue only: 候选命题。
-Known context: 已准入 / 已降级的相关命题。
-Forbidden scope: 不要讨论哪些相邻议题。
-Return format: position, bottom-level proposition, reasoning,
-implementation leaks, verdict, suggested wording/placement.
+```
+轮次：第几轮。
+仅限单一议题：候选命题。
+已知上下文：已准入 / 已降级的相关命题。
+禁止范围：不要讨论哪些相邻议题。
+返回格式：立场、底层命题、理由、实现泄漏、裁决、建议措辞 / 放置位置。
 ```
 
-### 3. Do not over-block on one member
+### 3. 不要被单个成员卡住
 
 如果用户要求是“每轮至少两个成员”，两个独立成员完成即可推进。
 
-当成员 errored、长时间 pending、或 task 被删除但消息已到：
+当成员出错、长时间待处理，或任务被删除但消息已经到达时：
 
 - 已收到的有效观点可以纳入记录。
 - 不要让一个不可用成员阻塞整个议题。
 - 如果当前轮不足两个观点，创建替代任务给可用成员。
-- 如果删除了已输出成员的 task，告知其输出已收到，不必补 completion。
+- 如果删除了已输出成员的任务，告诉对方输出已经收到，不必补完成确认。
 
-## Workflow
+## 流程
 
-### 1. State the current issue
+### 1. 先说明当前议题
 
 在每轮开始前写清楚：
 
-```text
+```
 当前只辩论 Pn：<候选命题>。
 本轮不讨论 Pn+1 或其他候选，只允许作为边界备注出现。
 ```
 
-### 2. Dispatch Round 1
+### 2. 发出第 1 轮
 
-Round 1 要求成员独立回答：
+第 1 轮要求成员独立回答：
 
 - 这是不是底层命题？
 - 是否依赖已接受的原则？
-- 是否组件 / 拓扑 / 实现形状过重？
-- 应 accept / rewrite / reject / downgrade？
-- 如果降级，是否仍然 mandatory？放在哪里？
+- 是否组件 / 拓扑 / 实现形态过重？
+- 应 `接受 / 重写 / 拒绝 / 降级`？
+- 如果降级，它是否仍然是必须项？应该放在哪里？
 
-### 3. Synthesize before Round 2
+### 3. 在第 2 轮前先综合
 
-Round 2 不是重复投票。必须把 Round 1 的主要分歧或共识反馈给成员：
+第 2 轮不是重复投票。必须把第 1 轮的主要分歧或共识反馈给成员：
 
 ```text
-Round 1 consensus: A and B recommend downgrade; C recommends rewrite.
-Re-evaluate whether any reason remains to keep it in first-principles.
-Return final wording, placement, and risk if downgraded.
+第 1 轮共识：A 和 B 建议降级；C 建议重写。
+请重新评估是否仍有理由把它保留在第一性原理层。
+请返回最终措辞、放置位置，以及降级后的风险。
 ```
 
-### 4. Close the issue immediately
+### 4. 立刻关闭议题
 
-一旦一个议题达到轮次和成员数要求：
+一旦一个议题满足轮次和成员数要求：
 
-1. 形成最终 verdict。
-2. 立刻更新 debate record。
+1. 形成最终裁决。
+2. 立刻更新辩论记录。
 3. 立刻同步主设计文档。
 4. 再启动下一个候选。
 
-不要等所有候选辩论完再集中写文档；这样最容易丢结论或混入旧结论。
+不要等所有候选辩论完再集中写文档；那样最容易丢结论或混入旧结论。
 
-### 5. Preserve mandatory derived requirements
+### 5. 保留强制派生要求
 
-“不进入第一性原理”不等于“不重要”。
+“不能进入第一性原理”不等于“没有价值”。
 
-如果团队结论是 downgrade but mandatory，主文档必须用明确措辞：
+如果团队结论是降级，但仍然是必须项，主文档必须用明确措辞：
 
 ```text
 <要求> 是由 Pn / Pm 推导出的强制派生边界，不是独立第一性原理。
@@ -144,20 +143,20 @@ Return final wording, placement, and risk if downgraded.
 
 并写入合适章节：
 
-- Derived boundary
-- Management/control-plane guardrail
-- Security/privacy non-goal
-- Runtime consistency invariant
-- Scenario or implementation constraint
+- 派生边界
+- 管理面 / control-plane 护栏
+- 安全 / 隐私非目标
+- 运行时一致性不变量
+- 场景或实现约束
 
-## Debate Record Template
+## 辩论记录模板
 
-```markdown
+```
 ## 议题：<议题名称>
 
 ### 第 1 轮辩论
 
-#### 观点1：<member>
+#### 观点 1：<成员>
 
 - **立场**：...
 - **底层命题**：...
@@ -167,9 +166,9 @@ Return final wording, placement, and risk if downgraded.
 
 ### 第 2 轮辩论
 
-#### 观点K：<member>
+#### 观点 K：<成员>
 
-- **最终判断**：accept / rewrite / reject / downgrade。
+- **最终判断**：`接受 / 重写 / 拒绝 / 降级`。
 - **建议措辞**：“...”。
 - **风险**：...
 
@@ -180,96 +179,90 @@ Return final wording, placement, and risk if downgraded.
 该结论必须 / 不得 ...；具体 <实现细节> 均属于后续实现边界。
 ```
 
-## Decision Heuristics
+## 决策准则
 
-### Accept into first principles
+### 接受进入第一性原理
 
-Only accept if the statement remains true after replacing:
+只有在把下面内容替换之后，陈述仍然成立，才接受进入第一性原理：
 
-- Redis / DB / MQ / WebSocket / push / pull
-- API / route / RPC / UI
-- Go type / schema / field name
-- single gateway / multi gateway topology
-- product workflow wording
+- Redis / 数据库 / MQ / WebSocket / push / pull
+- API / 路由 / RPC / 界面
+- Go 类型 / schema / 字段名
+- 单网关 / 多网关拓扑
+- 产品流程措辞
 
-It should define stable domain semantics, not implementation behavior.
+它应定义稳定的领域语义，而不是实现行为。
 
-### Rewrite before accepting
+### 接受前先重写
 
-Rewrite when the idea is primitive but wording leaks implementation.
+当想法本身是原始的，但措辞泄漏了实现时，就先重写。
 
-Examples:
+例如：
 
-- “Gateway owns sessions” → “请求路径执行权与管理控制意图必须分离”。
-- “复用 `Authentication`” → “认证事实必须遵守统一语义契约”。
+- “网关拥有会话” → “请求路径执行权与管理控制意图必须分离”。
+- “复用认证类型” → “认证事实必须遵守统一语义契约”。
 
-### Downgrade to mandatory derived boundary
+### 降级为强制派生边界
 
-Downgrade when the requirement is essential but derives from accepted principles.
+当需求很重要，但它是从已接受原则推导出来的，就降级为强制派生边界。
 
-Typical derived boundaries:
+典型的派生边界包括：
 
-- control action authorization / idempotency / auditability
-- distributed convergence / revocation semantics
-- least-credential / least-disclosure management-plane boundary
-- UI state truthfulness for pending / partial / failed operations
+- 控制动作授权 / 幂等性 / 可审计性
+- 分布式收敛 / 撤销语义
+- 最小凭据 / 最小披露的管理面边界
+- 界面对待处理 / 部分完成 / 失败操作的状态真实性
 
-Always label mandatory boundaries as mandatory.
+始终把强制边界标记为必须项。
 
-### Reject or remove
+### 拒绝或移除
 
-Reject when the statement is:
+当陈述属于以下情况时，就拒绝：
 
-- merely an implementation choice
-- a UI workflow
-- a field list
-- a product scenario
-- redundant with an accepted principle and not useful as a derived guardrail
+- 只是实现选择
+- 一个界面流程
+- 一个字段列表
+- 一个产品场景
+- 与已接受原则重复，而且作为派生护栏没有价值
 
-## Verification Checklist
+## 校验清单
 
-Before reporting completion:
+在汇报完成前，确认下面各项：
 
-- [ ] Each issue has exactly one candidate focus.
-- [ ] Each issue has at least two rounds.
-- [ ] Each round has at least two member outputs or the user-approved higher threshold.
-- [ ] Each issue has an explicit verdict.
-- [ ] Accepted principles appear in the target principle chapter.
-- [ ] Downgraded mandatory requirements appear in derived-boundary / non-goal
-      sections with “mandatory” language.
-- [ ] Debate record and main document are synchronized.
-- [ ] No stale bundled-language remains: `P1-P8`, `all principles`,
-      `final set`, `准入 N 条`.
-- [ ] No rejected / downgraded candidate remains as a peer principle.
-- [ ] Implementation details are excluded from principle wording.
+- [ ] 每个议题都只有一个候选焦点。
+- [ ] 每个议题至少有两轮。
+- [ ] 每轮至少有两个成员输出，或达到用户批准的更高门槛。
+- [ ] 每个议题都有明确裁决。
+- [ ] 已接受的原则出现在目标原则章节中。
+- [ ] 被降级的强制要求出现在派生边界 / 非目标 章节，并带有“必须项”字样。
+- [ ] 辩论记录与主文档保持同步。
+- [ ] 不再残留陈旧的打包式表述：`P1-P8`、`all principles`、`final set`、`准入 N 条`。
+- [ ] 不再把被拒绝 / 被降级的候选当作并列原则。
+- [ ] 原则措辞中不包含实现细节。
 
-Use text search for stale phrases after editing. If markdown docs are changed,
-run formatter and markdown lint when available.
+编辑后，用文本搜索检查陈旧短语。如果改动了 Markdown 文档，在可用时运行格式化器和 Markdown 语法检查。
 
-## Red Flags
+## 红旗
 
-Stop and fix if you notice:
+如果你注意到以下情况，就停下来修正：
 
-- “先把所有原则都让大家评一下” — split into one issue per principle.
-- “大家都差不多同意” — still need verdict, wording, placement, exclusions.
-- “降级到实现建议” — if mandatory, call it mandatory derived boundary.
-- “这只是历史记录，不用改” — stale records can contradict final docs.
-- “成员还没完成但已有两个输出” — okay to proceed only if user threshold is
-  met.
-- “第 2 轮直接复制第 1 轮问题” — round 2 must respond to round 1.
+- “先把所有原则都让大家评一下” —— 拆成每个原则一个议题。
+- “大家都差不多同意” —— 仍然需要裁决、措辞、位置、排除项。
+- “降级到实现建议” —— 如果是必须项，就称为必须的派生边界。
+- “这只是历史记录，不用改” —— 过时记录会和最终文档冲突。
+- “成员还没完成但已经有两个输出” —— 只有在达到用户门槛时才可以继续。
+- “第 2 轮直接复制第 1 轮问题” —— 第 2 轮必须回应第 1 轮。
 
-## Team Tool Notes
+## 团队工具说明
 
-If team mode is enabled and `team_*` tools are available, use them directly.
+如果团队模式已启用，并且可以使用 `team_*` 工具，就直接用它们。
 
-Useful pattern:
+常用模式：
 
-1. `team_task_create` for each member/round.
-2. `team_send_message` to ask members to claim tasks.
-3. `team_task_list` / `team_status` to monitor progress.
-4. Record peer messages as they arrive.
-5. Delete or replace stale pending tasks only when enough valid outputs exist or
-   a substitute task has been created.
+1. 对每个成员 / 每一轮使用 `team_task_create`。
+2. 用 `team_send_message` 让成员认领任务。
+3. 用 `team_task_list` / `team_status` 监控进度。
+4. 按照到达顺序记录同行消息。
+5. 只有在已有足够有效输出，或者已经创建替代任务时，才删除或替换过时的待处理任务。
 
-Do not inspect config files just to prove team mode exists; the presence of
-`team_*` tools is enough.
+不要为了证明团队模式存在而去检查配置文件；只要有 `team_*` 工具就够了。
