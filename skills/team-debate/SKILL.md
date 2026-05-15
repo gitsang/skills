@@ -5,9 +5,7 @@ description: Use when coordinating team-mode or multi-agent debate for design de
 
 # Team Debate
 
-把团队辩论当作**准入流程**，不要把多个代理的意见直接拼成摘要。
-
-核心原则：**一次只辩论一个议题；每个议题至少两轮；每轮至少两个成员；结论要及时写入文档；未准入的内容必须明确降级、移除或重写。**
+核心原则：**一次只辩论一个议题；每个议题至少两轮；每轮至少两个成员；结论及时写入文档；**
 
 ## 何时使用
 
