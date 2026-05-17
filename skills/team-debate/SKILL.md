@@ -1,11 +1,11 @@
 ---
 name: team-debate
-description: Use when coordinating team-mode or multi-agent debate for design decisions, first-principle admission, architecture tradeoffs, conceptual boundaries, or any request that says core concepts must be debated with team members. Enforces one-issue-at-a-time debate, two-round minimums, explicit verdicts, timely debate-record updates, and derived-boundary handling.
+description: Use when coordinating team-mode or multi-agent debate for design decisions, first-principle admission, architecture tradeoffs, conceptual boundaries, or any request that says core concepts must be debated with team members. Enforces one-issue-at-a-time debate, role-separated rounds, lead verdicts over majority voting, timely records, and derived-boundary handling.
 ---
 
 # Team Debate
 
-核心原则：**一次只辩论一个议题；每个议题至少两轮；每轮至少两个成员；结论及时写入文档；**
+核心原则：**一次只辩论一个议题；先独立判断，再受控复判；多数票只是信号，lead 才能裁决；结论必须小步落档并提交。**
 
 ## 何时使用
 
@@ -41,8 +41,8 @@ description: Use when coordinating team-mode or multi-agent debate for design de
 
 ```
 议题：单一候选命题，不能夹带其他候选。
-第 1 轮：至少两个成员独立判断。
-第 2 轮：至少两个成员基于第 1 轮重新判断。
+第 1 轮：至少两个成员独立判断，不能互相锚定。
+第 2 轮：默认进入；至少两个成员基于第 1 轮分歧复判，不重新投票。
 裁决：接受 / 重写 / 拒绝 / 降级 之一。
 放置位置：写入第一性原理、派生边界、非目标、场景检验或移除。
 措辞：给出最终可落文档措辞。
@@ -89,6 +89,8 @@ description: Use when coordinating team-mode or multi-agent debate for design de
 
 ## 流程
 
+把 lead 当作 AutoGen 式 aggregator / chat-room moderator：负责分发、限界、综合和裁决；成员只负责从指定视角提供证据、反驳和边界。多数票不能自动准入任何结论。
+
 ### 1. 先说明当前议题
 
 在每轮开始前写清楚：
@@ -105,12 +107,12 @@ description: Use when coordinating team-mode or multi-agent debate for design de
 - 这是不是底层命题？
 - 是否依赖已接受的原则？
 - 是否组件 / 拓扑 / 实现形态过重？
-- 应 `接受 / 重写 / 拒绝 / 降级`？
+- 应 `接受 / 重写 / 拒绝 / 降级`？多数一致也只能作为信号。
 - 如果降级，它是否仍然是必须项？应该放在哪里？
 
 ### 3. 在第 2 轮前先综合
 
-第 2 轮不是重复投票。必须把第 1 轮的主要分歧或共识反馈给成员：
+第 2 轮不是重复投票。lead 只把第 1 轮的主要分歧、错层级风险和未决点反馈给成员，避免全量聊天室噪音：
 
 ```text
 第 1 轮共识：A 和 B 建议降级；C 建议重写。
@@ -118,18 +120,31 @@ description: Use when coordinating team-mode or multi-agent debate for design de
 请返回最终措辞、放置位置，以及降级后的风险。
 ```
 
-### 4. 立刻关闭议题
+### 4. 默认进行第 2 轮
+
+第 2 轮必须回应第 1 轮的分歧，而不是复述自己的原始立场。每个成员应给出：
+
+- 是否改变裁决建议。
+- 哪个反方理由最强，为什么接受或拒绝。
+- 最终措辞、放置位置和排除项。
+
+### 5. 终止条件 / 例外
+
+默认路径是两轮。只有当第 1 轮所有有效成员都明确表示“无新论点、无异议”时，lead 才可以宣布提前收敛；任一成员可以否决提前收敛并强制进入第 2 轮。提前收敛必须写入辩论记录，不能变成常规捷径。
+
+### 6. 立刻关闭议题
 
 一旦一个议题满足轮次和成员数要求：
 
-1. 形成最终裁决。
-2. 立刻更新辩论记录。
-3. 立刻同步主设计文档。
-4. 再启动下一个候选。
+1. lead 形成最终裁决：`接受 / 重写 / 拒绝 / 降级`。
+2. 写出最终措辞、放置位置和排除项。
+3. 只修改本议题相关的辩论记录和目标文档。
+4. 检查冗余、重复和争议残留。
+5. 提交 commit 后再启动下一个候选。
 
 不要等所有候选辩论完再集中写文档；那样最容易丢结论或混入旧结论。
 
-### 5. 保留强制派生要求
+### 7. 保留强制派生要求
 
 “不能进入第一性原理”不等于“没有价值”。
 
