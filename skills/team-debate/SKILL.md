@@ -39,7 +39,7 @@ description: Use when coordinating team-mode or multi-agent debate for design de
 
 每个议题都必须有清晰合同：
 
-```
+```text
 议题：单一候选命题，不能夹带其他候选。
 第 1 轮：至少两个成员独立判断，不能互相锚定。
 第 2 轮：默认进入；至少两个成员基于第 1 轮分歧复判，不重新投票。
@@ -68,7 +68,7 @@ description: Use when coordinating team-mode or multi-agent debate for design de
 
 每个团队任务都应包含：
 
-```
+```text
 轮次：第几轮。
 仅限单一议题：候选命题。
 已知上下文：已准入 / 已降级的相关命题。
@@ -95,7 +95,7 @@ description: Use when coordinating team-mode or multi-agent debate for design de
 
 在每轮开始前写清楚：
 
-```
+```text
 当前只辩论 Pn：<候选命题>。
 本轮不讨论 Pn+1 或其他候选，只允许作为边界备注出现。
 ```
@@ -130,7 +130,8 @@ description: Use when coordinating team-mode or multi-agent debate for design de
 
 ### 5. 终止条件 / 例外
 
-默认路径是两轮。提前收敛是例外，不是常规路径。只有当第 1 轮所有有效成员都明确表示“无新论点、无异议”时，lead 才可以宣布提前收敛；任一成员提出新论点、风险或异议时，必须进入第 2 轮。提前收敛必须写入辩论记录。
+默认路径是两轮。提前收敛是例外，不是常规路径。只有当第 1 轮所有有效成员都明确表示“无新论点、无异议”时，lead 才可以宣布提前收敛。
+任一成员提出新论点、风险或异议时，必须进入第 2 轮。提前收敛必须写入辩论记录。
 
 ### 6. 立刻关闭议题
 
@@ -146,7 +147,7 @@ description: Use when coordinating team-mode or multi-agent debate for design de
 
 ## 辩论记录模板
 
-```
+```markdown
 ## 议题：<议题名称>
 
 ### 第 1 轮辩论
