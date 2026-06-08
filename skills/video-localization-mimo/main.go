@@ -9,7 +9,7 @@ import (
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "server" {
-		fmt.Println("Web 服务器模式尚未实现")
+		fmt.Println("Use: go run cmd/server/main.go")
 		os.Exit(1)
 	} else {
 		cli.Execute()
