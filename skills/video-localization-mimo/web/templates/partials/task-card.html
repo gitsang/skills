@@ -1,0 +1,15 @@
+{{define "task-card"}}
+<article>
+    <header>
+        <h3><a href="/task/{{.ID}}">{{.ID}}</a></h3>
+        <span class="badge {{.Status}}">{{.Status}}</span>
+    </header>
+    <div class="progress-bar">
+        <div class="fill" style="width: {{.Progress}}%"></div>
+    </div>
+    <footer>
+        <small>{{.CreatedAt.Format "2006-01-02 15:04:05"}}</small>
+        <button hx-delete="/api/tasks/{{.ID}}" hx-confirm="Are you sure?" hx-target="closest article" hx-swap="outerHTML" class="outline">Delete</button>
+    </footer>
+</article>
+{{end}}

@@ -1,0 +1,99 @@
+{{template "base" .}}
+{{define "content"}}
+<section>
+    <h1>Video Localization</h1>
+    <p>Translate and dub videos using MiMo AI</p>
+</section>
+
+<section>
+    <form hx-post="/upload" hx-encoding="multipart/form-data" hx-swap="none">
+        <div id="drop-zone" class="drop-zone">
+            <label for="video-upload">
+                📁 Drag & drop or click to upload
+            </label>
+            <input type="file" id="video-upload" name="video" accept="video/*,audio/*" required>
+        </div>
+
+        <details>
+            <summary>Advanced Settings</summary>
+            <div class="grid">
+                <label>
+                    Source Language
+                    <select name="source_lang">
+                        <option value="auto">Auto Detect</option>
+                        <option value="zh">Chinese</option>
+                        <option value="en">English</option>
+                        <option value="ja">Japanese</option>
+                        <option value="ko">Korean</option>
+                    </select>
+                </label>
+                <label>
+                    Target Language
+                    <select name="target_lang">
+                        <option value="en">English</option>
+                        <option value="zh">Chinese</option>
+                        <option value="ja">Japanese</option>
+                        <option value="ko">Korean</option>
+                    </select>
+                </label>
+                <label>
+                    Voice
+                    <select name="voice">
+                        <option value="Chloe">Chloe (EN)</option>
+                        <option value="Mia">Mia (ZH)</option>
+                        <option value="mimo_default">Default</option>
+                    </select>
+                </label>
+            </div>
+            <label>
+                Speed
+                <input type="range" name="speed" min="0.5" max="2.0" step="0.1" value="1.0">
+            </label>
+        </details>
+
+        <button type="submit">Start Localization</button>
+    </form>
+</section>
+
+<section>
+    <h2>Recent Tasks</h2>
+    <div hx-get="/api/tasks" hx-trigger="every 5s" hx-swap="innerHTML">
+        {{template "task-list" .Tasks}}
+    </div>
+</section>
+{{end}}
+
+{{define "task-list"}}
+{{if .}}
+<table>
+    <thead>
+        <tr>
+            <th>Task</th>
+            <th>Status</th>
+            <th>Progress</th>
+            <th>Created</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{range .}}
+        <tr>
+            <td><a href="/task/{{.ID}}">{{.ID}}</a></td>
+            <td><span class="badge {{.Status}}">{{.Status}}</span></td>
+            <td>
+                <div class="progress-bar">
+                    <div class="fill" style="width: {{.Progress}}%"></div>
+                </div>
+            </td>
+            <td>{{.CreatedAt.Format "2006-01-02 15:04:05"}}</td>
+            <td>
+                <button hx-delete="/api/tasks/{{.ID}}" hx-confirm="Are you sure?" hx-target="closest tr" hx-swap="outerHTML">Delete</button>
+            </td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+{{else}}
+<p>No tasks yet. Upload a video to get started.</p>
+{{end}}
+{{end}}

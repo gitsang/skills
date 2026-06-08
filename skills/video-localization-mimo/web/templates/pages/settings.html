@@ -1,0 +1,57 @@
+{{template "base" .}}
+{{define "content"}}
+<nav>
+    <a href="/">← Back</a>
+    <strong>Settings</strong>
+</nav>
+
+<article>
+    <header>
+        <h1>Settings</h1>
+    </header>
+
+    <form>
+        <h2>MiMo API</h2>
+        <label>
+            API Key
+            <input type="password" name="api_key" value="{{.Config.MiMo.APIKey}}" placeholder="Enter your API key">
+        </label>
+
+        <h2>Default Settings</h2>
+        <div class="grid">
+            <label>
+                Source Language
+                <select name="source_lang">
+                    <option value="auto" {{if eq .Config.Defaults.SourceLang "auto"}}selected{{end}}>Auto Detect</option>
+                    <option value="zh" {{if eq .Config.Defaults.SourceLang "zh"}}selected{{end}}>Chinese</option>
+                    <option value="en" {{if eq .Config.Defaults.SourceLang "en"}}selected{{end}}>English</option>
+                </select>
+            </label>
+            <label>
+                Target Language
+                <select name="target_lang">
+                    <option value="en" {{if eq .Config.Defaults.TargetLang "en"}}selected{{end}}>English</option>
+                    <option value="zh" {{if eq .Config.Defaults.TargetLang "zh"}}selected{{end}}>Chinese</option>
+                    <option value="ja" {{if eq .Config.Defaults.TargetLang "ja"}}selected{{end}}>Japanese</option>
+                </select>
+            </label>
+            <label>
+                Default Voice
+                <select name="voice">
+                    <option value="Chloe" {{if eq .Config.Defaults.Voice "Chloe"}}selected{{end}}>Chloe (EN)</option>
+                    <option value="Mia" {{if eq .Config.Defaults.Voice "Mia"}}selected{{end}}>Mia (ZH)</option>
+                    <option value="mimo_default" {{if eq .Config.Defaults.Voice "mimo_default"}}selected{{end}}>Default</option>
+                </select>
+            </label>
+        </div>
+
+        <h2>FFmpeg</h2>
+        <label>
+            FFmpeg Path
+            <input type="text" name="ffmpeg_path" value="{{.Config.FFmpeg.Path}}">
+        </label>
+
+        <button type="submit">Save Settings</button>
+    </form>
+</article>
+{{end}}

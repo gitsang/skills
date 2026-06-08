@@ -1,0 +1,14 @@
+{{define "step"}}
+<div class="step {{.Status}}">
+    <span class="step-icon">
+        {{if eq .Status "completed"}}✅{{end}}
+        {{if eq .Status "running"}}⏳{{end}}
+        {{if eq .Status "pending"}}⬜{{end}}
+        {{if eq .Status "failed"}}❌{{end}}
+    </span>
+    <span>{{.Name}}</span>
+    {{if .Error}}
+    <small class="error">{{.Error}}</small>
+    {{end}}
+</div>
+{{end}}

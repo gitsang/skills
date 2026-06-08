@@ -1,0 +1,8 @@
+{{define "progress-bar"}}
+<div class="progress-container">
+    <div class="progress-bar">
+        <div class="fill" style="width: {{.Progress}}%"></div>
+    </div>
+    <span>{{printf "%.0f" (mul .Progress 100)}}%</span>
+</div>
+{{end}}
