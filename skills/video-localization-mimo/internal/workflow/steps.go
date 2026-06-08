@@ -46,17 +46,18 @@ func (s *ExtractAudioStep) Run(ctx context.Context, state *State) error {
 }
 
 type TranscribeStep struct {
-	client *mimo.Client
+	client       *mimo.Client
+	ffmpegRunner *ffmpeg.Runner
 }
 
-func NewTranscribeStep(client *mimo.Client) *TranscribeStep {
-	return &TranscribeStep{client: client}
+func NewTranscribeStep(client *mimo.Client, ffmpegRunner *ffmpeg.Runner) *TranscribeStep {
+	return &TranscribeStep{client: client, ffmpegRunner: ffmpegRunner}
 }
 
 func (s *TranscribeStep) Name() string { return "语音转录" }
 
 func (s *TranscribeStep) Run(ctx context.Context, state *State) error {
-	result, err := s.client.Transcribe(ctx, state.SourceAudio, state.SourceLang)
+	result, err := s.client.TranscribeWithSplit(ctx, state.SourceAudio, state.SourceLang, s.ffmpegRunner)
 	if err != nil {
 		return fmt.Errorf("transcribing audio: %w", err)
 	}

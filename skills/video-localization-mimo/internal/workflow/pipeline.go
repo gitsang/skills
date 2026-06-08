@@ -38,7 +38,7 @@ func NewPipeline(cfg *config.Config) *Pipeline {
 
 	p.steps = []Step{
 		NewExtractAudioStep(ffmpegRunner),
-		NewTranscribeStep(mimoClient),
+		NewTranscribeStep(mimoClient, ffmpegRunner),
 		NewTranslateStep(mimoClient),
 		NewSynthesizeStep(mimoClient),
 		NewAlignAudioStep(ffmpegRunner),

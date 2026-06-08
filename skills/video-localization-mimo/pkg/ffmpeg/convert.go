@@ -60,3 +60,22 @@ func (r *Runner) ConvertAudio(ctx context.Context, input, output string, sampleR
 
 	return nil
 }
+
+func (r *Runner) CutAudio(ctx context.Context, input, output string, startTime, duration int) error {
+	args := []string{
+		"-i", input,
+		"-ss", strconv.Itoa(startTime),
+		"-t", strconv.Itoa(duration),
+		"-acodec", "pcm_s16le",
+		"-ar", "16000",
+		"-ac", "1",
+		"-y",
+		output,
+	}
+
+	if err := r.Run(ctx, args...); err != nil {
+		return fmt.Errorf("cutting audio %s: %w", input, err)
+	}
+
+	return nil
+}
