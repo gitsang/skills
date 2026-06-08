@@ -27,5 +27,6 @@ vendor/
 Thumbs.db
 
 # Outputs
+inputs/
 outputs/
 uploads/
