@@ -45,4 +45,5 @@ func init() {
 	rootCmd.AddCommand(cloneCmd)
 	rootCmd.AddCommand(subtitleCmd)
 	rootCmd.AddCommand(composeCmd)
+	rootCmd.AddCommand(localizeCmd)
 }
