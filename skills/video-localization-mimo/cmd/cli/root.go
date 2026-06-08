@@ -38,4 +38,11 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "配置文件路径")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "详细输出")
+
+	rootCmd.AddCommand(transcribeCmd)
+	rootCmd.AddCommand(translateCmd)
+	rootCmd.AddCommand(ttsCmd)
+	rootCmd.AddCommand(cloneCmd)
+	rootCmd.AddCommand(subtitleCmd)
+	rootCmd.AddCommand(composeCmd)
 }
