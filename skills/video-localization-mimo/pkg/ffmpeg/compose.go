@@ -3,6 +3,7 @@ package ffmpeg
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 // ComposeOptions contains the configuration for composing a final video.
@@ -66,7 +67,8 @@ func (r *Runner) Compose(ctx context.Context, opts ComposeOptions) error {
 
 	videoFilters := []string{}
 	if opts.SubtitlePath != "" {
-		videoFilters = append(videoFilters, fmt.Sprintf("subtitles=%s", opts.SubtitlePath))
+		escapedPath := escapeFFmpegPath(opts.SubtitlePath)
+		videoFilters = append(videoFilters, fmt.Sprintf("subtitles=%s", escapedPath))
 	}
 
 	if len(videoFilters) > 0 {
@@ -142,4 +144,17 @@ func (r *Runner) ComposeWithSubtitles(ctx context.Context, videoPath, subtitlePa
 		OutputPath:   outputPath,
 		AudioVolume:  1.0,
 	})
+}
+
+func escapeFFmpegPath(path string) string {
+	replacer := strings.NewReplacer(
+		`\`, `\\`,
+		`:`, `\:`,
+		`'`, `\'`,
+		`[`, `\[`,
+		`]`, `\]`,
+		`,`, `\,`,
+		`;`, `\;`,
+	)
+	return replacer.Replace(path)
 }
