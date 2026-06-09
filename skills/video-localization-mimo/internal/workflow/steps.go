@@ -126,9 +126,16 @@ func splitTextToLines(text string, maxLen int) []string {
 			lines = append(lines, string(runes))
 			break
 		}
-		cut := maxLen
-		for cut > 0 && runes[cut] != ' ' && runes[cut] != '，' && runes[cut] != '。' {
-			cut--
+
+		// 优先在句子边界切分（. ! ? 。！？）
+		cut := findSplitPoint(runes, maxLen, []rune{'.', '!', '?', '。', '！', '？'})
+		if cut == 0 {
+			// 其次在从句边界切分（, ; : ，；：）
+			cut = findSplitPoint(runes, maxLen, []rune{',', ';', ':', '，', '；', '：'})
+		}
+		if cut == 0 {
+			// 最后按空格切分
+			cut = findSplitPoint(runes, maxLen, []rune{' '})
 		}
 		if cut == 0 {
 			cut = maxLen
@@ -137,6 +144,18 @@ func splitTextToLines(text string, maxLen int) []string {
 		runes = runes[cut:]
 	}
 	return lines
+}
+
+func findSplitPoint(runes []rune, maxLen int, separators []rune) int {
+	// 从 maxLen 位置向前搜索，找到最近的分隔符
+	for i := maxLen; i > 0; i-- {
+		for _, sep := range separators {
+			if runes[i] == sep {
+				return i + 1 // 包含分隔符本身
+			}
+		}
+	}
+	return 0
 }
 
 type TranslateStep struct {
@@ -274,10 +293,18 @@ func (s *SynthesizeStep) combineAudioSegments(ctx context.Context, segments []st
 	}
 
 	// Create a file list for FFmpeg concat
-	listPath := outputPath + ".txt"
+	// Use a clean name for the list file (not .wav.txt)
+	listPath := strings.TrimSuffix(outputPath, filepath.Ext(outputPath)) + "_concat.txt"
+	listDir := filepath.Dir(listPath)
+
 	var listContent strings.Builder
 	for _, seg := range segments {
-		listContent.WriteString(fmt.Sprintf("file '%s'\n", seg))
+		// Use relative paths from the list file's location to avoid path doubling
+		relPath, err := filepath.Rel(listDir, seg)
+		if err != nil {
+			return fmt.Errorf("computing relative path for %s: %w", seg, err)
+		}
+		listContent.WriteString(fmt.Sprintf("file '%s'\n", relPath))
 	}
 	if err := os.WriteFile(listPath, []byte(listContent.String()), 0644); err != nil {
 		return fmt.Errorf("writing concat list: %w", err)
@@ -411,10 +438,16 @@ func (s *AlignAudioStep) combineAlignedSegments(ctx context.Context, segments []
 		return fmt.Errorf("no aligned segments to combine")
 	}
 
-	listPath := outputPath + ".txt"
+	listPath := strings.TrimSuffix(outputPath, filepath.Ext(outputPath)) + "_concat.txt"
+	listDir := filepath.Dir(listPath)
+
 	var listContent strings.Builder
 	for _, seg := range segments {
-		listContent.WriteString(fmt.Sprintf("file '%s'\n", seg))
+		relPath, err := filepath.Rel(listDir, seg)
+		if err != nil {
+			return fmt.Errorf("computing relative path for %s: %w", seg, err)
+		}
+		listContent.WriteString(fmt.Sprintf("file '%s'\n", relPath))
 	}
 	if err := os.WriteFile(listPath, []byte(listContent.String()), 0644); err != nil {
 		return fmt.Errorf("writing concat list: %w", err)
