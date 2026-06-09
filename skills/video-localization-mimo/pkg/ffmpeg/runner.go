@@ -14,11 +14,9 @@ import (
 // It holds the filesystem paths to both binaries and provides methods
 // to execute FFmpeg operations with proper context cancellation support.
 type Runner struct {
-	// ffmpegPath is the absolute path to the ffmpeg binary
-	ffmpegPath string
-
-	// ffprobePath is the absolute path to the ffprobe binary
+	ffmpegPath  string
 	ffprobePath string
+	gpuDetector *GPUDetector
 }
 
 // NewRunner creates a new Runner instance with the specified paths to FFmpeg tools.
@@ -33,6 +31,22 @@ func NewRunner(ffmpegPath, ffprobePath string) *Runner {
 		ffmpegPath:  ffmpegPath,
 		ffprobePath: ffprobePath,
 	}
+}
+
+func (r *Runner) WithGPU() *Runner {
+	r.gpuDetector = NewGPUDetector(r)
+	return r
+}
+
+func (r *Runner) GetGPUInfo(ctx context.Context) (*GPUInfo, error) {
+	if r.gpuDetector == nil {
+		return &GPUInfo{
+			Type:      GPUTypeNone,
+			Encoder:   "libx264",
+			Available: false,
+		}, nil
+	}
+	return r.gpuDetector.DetectGPU(ctx)
 }
 
 // Run executes an FFmpeg command with the given arguments.

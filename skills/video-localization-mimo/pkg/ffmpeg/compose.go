@@ -80,7 +80,12 @@ func (r *Runner) Compose(ctx context.Context, opts ComposeOptions) error {
 			filterStr += f
 		}
 		args = append(args, "-vf", filterStr)
-		args = append(args, "-c:v", "libx264", "-preset", "medium", "-crf", "23")
+		
+		gpuInfo, err := r.GetGPUInfo(ctx)
+		if err != nil {
+			return fmt.Errorf("detecting GPU: %w", err)
+		}
+		args = append(args, gpuInfo.GetEncoderArgs()...)
 	} else {
 		args = append(args, "-c:v", "copy")
 	}

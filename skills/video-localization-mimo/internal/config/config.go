@@ -23,6 +23,7 @@ type MiMoConfig struct {
 type FFmpegConfig struct {
 	Path        string `mapstructure:"path"`
 	FFprobePath string `mapstructure:"ffprobe_path"`
+	GPU         bool   `mapstructure:"gpu"`
 }
 
 type ServerConfig struct {
@@ -78,6 +79,7 @@ func setDefaults(v *viper.Viper) {
 
 	v.SetDefault("ffmpeg.path", "ffmpeg")
 	v.SetDefault("ffmpeg.ffprobe_path", "ffprobe")
+	v.SetDefault("ffmpeg.gpu", true)
 
 	v.SetDefault("server.host", "0.0.0.0")
 	v.SetDefault("server.port", 8080)

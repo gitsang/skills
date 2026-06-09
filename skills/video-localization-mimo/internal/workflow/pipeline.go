@@ -29,6 +29,9 @@ func NewPipeline(cfg *config.Config) *Pipeline {
 	})
 
 	ffmpegRunner := ffmpeg.NewRunner(cfg.FFmpeg.Path, cfg.FFmpeg.FFprobePath)
+	if cfg.FFmpeg.GPU {
+		ffmpegRunner = ffmpegRunner.WithGPU()
+	}
 
 	p := &Pipeline{
 		config:       cfg,
@@ -57,6 +60,9 @@ func NewPipelineWithTimeout(cfg *config.Config, timeout time.Duration) *Pipeline
 	})
 
 	ffmpegRunner := ffmpeg.NewRunner(cfg.FFmpeg.Path, cfg.FFmpeg.FFprobePath)
+	if cfg.FFmpeg.GPU {
+		ffmpegRunner = ffmpegRunner.WithGPU()
+	}
 
 	p := &Pipeline{
 		config:       cfg,
