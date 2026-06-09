@@ -30,7 +30,7 @@ func init() {
 	localizeCmd.Flags().String("clone-ref", "", "克隆参考音频路径（可选）")
 	localizeCmd.Flags().Bool("clone", false, "从视频自动提取声音进行克隆")
 	localizeCmd.Flags().Float64("speed", 1.0, "语速（0.5-2.0）")
-	localizeCmd.Flags().Duration("timeout", 120*time.Second, "API 请求超时时间")
+	localizeCmd.Flags().Duration("timeout", 600*time.Second, "API 请求超时时间")
 	_ = localizeCmd.MarkFlagRequired("video")
 }
 
@@ -65,7 +65,7 @@ func runLocalize(cmd *cobra.Command, args []string) error {
 	// 如果指定 --clone，从视频提取前30秒音频作为参考
 	if clone && cloneRef == "" {
 		cloneRef = filepath.Join(outputDir, "clone_ref.wav")
-		if err := os.MkdirAll(outputDir, 0755); err != nil {
+		if err := os.MkdirAll(outputDir, 0o755); err != nil {
 			return fmt.Errorf("创建输出目录失败: %w", err)
 		}
 		fmt.Printf("🎤 从视频提取前30秒音频作为克隆参考...\n")
