@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/gitsang/skills/video-localization-mimo/internal/config"
@@ -9,8 +10,8 @@ import (
 )
 
 var (
-	cfgFile  string
-	verbose  bool
+	cfgFile   string
+	verbose   bool
 	appConfig *config.Config
 )
 
@@ -24,6 +25,7 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("加载配置失败: %w", err)
 		}
 		appConfig = cfg
+		slog.Info("preparing...", slog.Any("config", cfg))
 		return nil
 	},
 }
@@ -47,3 +49,4 @@ func init() {
 	rootCmd.AddCommand(composeCmd)
 	rootCmd.AddCommand(localizeCmd)
 }
+

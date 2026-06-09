@@ -8,7 +8,7 @@ import (
 
 const (
 	llmEndpoint = "/chat/completions"
-	llmModel    = "mimo-v2-flash"
+	llmModel    = "mimo-v2.5-pro"
 )
 
 // Translate 将文本从源语言翻译到目标语言。
