@@ -51,32 +51,24 @@ func (r *Runner) Compose(ctx context.Context, opts ComposeOptions) error {
 		return fmt.Errorf("output path is required")
 	}
 
-	// Default volume to 1.0 if not set
 	volume := opts.AudioVolume
 	if volume == 0 {
 		volume = 1.0
 	}
 
 	args := []string{}
-
-	// Add input video
 	args = append(args, "-i", opts.VideoPath)
 
-	// Add input audio if replacing
 	hasAudioReplace := opts.AudioPath != ""
 	if hasAudioReplace {
 		args = append(args, "-i", opts.AudioPath)
 	}
 
-	// Build video filter chain
 	videoFilters := []string{}
-
-	// Add subtitle filter if specified
 	if opts.SubtitlePath != "" {
 		videoFilters = append(videoFilters, fmt.Sprintf("subtitles=%s", opts.SubtitlePath))
 	}
 
-	// Apply video filters if any
 	if len(videoFilters) > 0 {
 		filterStr := ""
 		for i, f := range videoFilters {
@@ -86,31 +78,25 @@ func (r *Runner) Compose(ctx context.Context, opts ComposeOptions) error {
 			filterStr += f
 		}
 		args = append(args, "-vf", filterStr)
+		args = append(args, "-c:v", "libx264", "-preset", "medium", "-crf", "23")
+	} else {
+		args = append(args, "-c:v", "copy")
 	}
 
-	// Build audio filter for volume adjustment
 	if volume != 1.0 {
 		args = append(args, "-af", fmt.Sprintf("volume=%.2f", volume))
 	}
 
-	// Configure stream mapping
 	if hasAudioReplace {
-		// Map video from first input, audio from second input
 		args = append(args,
-			"-c:v", "copy", // Copy video codec (no re-encoding unless filters applied)
-			"-c:a", "aac", // Encode audio as AAC
-			"-map", "0:v:0", // Use video from first input
-			"-map", "1:a:0", // Use audio from second input
+			"-c:a", "aac",
+			"-map", "0:v:0",
+			"-map", "1:a:0",
 		)
 	} else {
-		// Keep original audio, just apply volume if needed
-		args = append(args,
-			"-c:v", "copy",
-			"-c:a", "aac",
-		)
+		args = append(args, "-c:a", "aac")
 	}
 
-	// Overwrite output and use shortest stream duration
 	args = append(args, "-y", opts.OutputPath)
 
 	if err := r.Run(ctx, args...); err != nil {
