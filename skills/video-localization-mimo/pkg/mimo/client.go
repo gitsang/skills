@@ -14,7 +14,7 @@ import (
 
 const (
 	defaultBaseURL    = "https://api.xiaomimimo.com/v1"
-	defaultTimeout    = 120 * time.Second
+	defaultTimeout    = 600 * time.Second
 	defaultMaxRetries = 3
 	defaultRateLimit  = 100
 )
