@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -149,23 +150,36 @@ func NewTranslateStep(client *mimo.Client) *TranslateStep {
 func (s *TranslateStep) Name() string { return "文本翻译" }
 
 func (s *TranslateStep) Run(ctx context.Context, state *State) error {
-	translated, err := s.client.Translate(ctx, &mimo.TranslateRequest{
-		Text:       state.SourceText,
-		SourceLang: state.SourceLang,
-		TargetLang: state.TargetLang,
-	})
-	if err != nil {
-		return fmt.Errorf("translating text: %w", err)
+	if len(state.SourceSRT) == 0 {
+		return fmt.Errorf("no source SRT segments available")
 	}
 
-	state.TargetText = translated
+	segments := make([]string, len(state.SourceSRT))
+	for i, seg := range state.SourceSRT {
+		translated, err := s.client.Translate(ctx, &mimo.TranslateRequest{
+			Text:       seg.Text,
+			SourceLang: state.SourceLang,
+			TargetLang: state.TargetLang,
+		})
+		if err != nil {
+			return fmt.Errorf("translating segment %d: %w", i+1, err)
+		}
+
+		segments[i] = translated
+		log.Printf("[Translate] 片段 %d/%d 翻译完成: %s -> %s", i+1, len(state.SourceSRT), seg.Text, translated)
+	}
+
+	state.TargetSegments = segments
+
+	// Also set the full translated text for backward compatibility
+	state.TargetText = strings.Join(segments, "\n")
 
 	txtPath := filepath.Join(state.OutputDir, "target_text.txt")
-	if err := os.WriteFile(txtPath, []byte(translated), 0644); err != nil {
+	if err := os.WriteFile(txtPath, []byte(state.TargetText), 0644); err != nil {
 		return fmt.Errorf("writing target text: %w", err)
 	}
 
-	log.Printf("[Translate] 翻译完成，文本长度: %d", len(translated))
+	log.Printf("[Translate] 翻译完成，共 %d 个片段", len(segments))
 	return nil
 }
 
@@ -180,57 +194,110 @@ func NewSynthesizeStep(client *mimo.Client) *SynthesizeStep {
 func (s *SynthesizeStep) Name() string { return "语音合成" }
 
 func (s *SynthesizeStep) Run(ctx context.Context, state *State) error {
-	outputPath := filepath.Join(state.OutputDir, "target_audio.wav")
-
-	if state.CloneRef != "" {
-		return s.cloneVoice(ctx, state, outputPath)
+	if len(state.TargetSegments) == 0 {
+		return fmt.Errorf("no target segments available")
 	}
-	return s.synthesizeVoice(ctx, state, outputPath)
+
+	outputDir := filepath.Join(state.OutputDir, "segments")
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return fmt.Errorf("creating segments directory: %w", err)
+	}
+
+	audioSegments := make([]string, len(state.TargetSegments))
+	for i, text := range state.TargetSegments {
+		outputPath := filepath.Join(outputDir, fmt.Sprintf("segment_%03d.wav", i+1))
+
+		if state.CloneRef != "" {
+			if err := s.cloneVoiceSegment(ctx, state, text, outputPath); err != nil {
+				return fmt.Errorf("cloning voice for segment %d: %w", i+1, err)
+			}
+		} else {
+			if err := s.synthesizeVoiceSegment(ctx, state, text, outputPath); err != nil {
+				return fmt.Errorf("synthesizing segment %d: %w", i+1, err)
+			}
+		}
+
+		audioSegments[i] = outputPath
+		log.Printf("[Synthesize] 片段 %d/%d 合成完成: %s", i+1, len(state.TargetSegments), outputPath)
+	}
+
+	state.TargetAudioSegments = audioSegments
+
+	// Also create a combined audio file for backward compatibility
+	combinedPath := filepath.Join(state.OutputDir, "target_audio.wav")
+	if err := s.combineAudioSegments(ctx, audioSegments, combinedPath); err != nil {
+		return fmt.Errorf("combining audio segments: %w", err)
+	}
+	state.TargetAudio = combinedPath
+
+	log.Printf("[Synthesize] 合成完成，共 %d 个片段", len(audioSegments))
+	return nil
 }
 
-func (s *SynthesizeStep) synthesizeVoice(ctx context.Context, state *State, outputPath string) error {
+func (s *SynthesizeStep) synthesizeVoiceSegment(ctx context.Context, state *State, text, outputPath string) error {
 	if err := ensureDir(outputPath); err != nil {
 		return err
 	}
 
 	audioData, err := s.client.Synthesize(ctx, &mimo.SynthesizeRequest{
-		Text:   state.TargetText,
+		Text:   text,
 		Voice:  state.Voice,
 		Format: "wav",
 	})
 	if err != nil {
-		return fmt.Errorf("synthesizing speech: %w", err)
+		return err
 	}
 
-	if err := os.WriteFile(outputPath, audioData, 0644); err != nil {
-		return fmt.Errorf("writing audio file: %w", err)
-	}
-
-	state.TargetAudio = outputPath
-	log.Printf("[Synthesize] 合成完成: %s (%d bytes)", outputPath, len(audioData))
-	return nil
+	return os.WriteFile(outputPath, audioData, 0644)
 }
 
-func (s *SynthesizeStep) cloneVoice(ctx context.Context, state *State, outputPath string) error {
+func (s *SynthesizeStep) cloneVoiceSegment(ctx context.Context, state *State, text, outputPath string) error {
 	if err := ensureDir(outputPath); err != nil {
 		return err
 	}
 
 	audioData, err := s.client.Clone(ctx, &mimo.CloneRequest{
-		Text:           state.TargetText,
+		Text:           text,
 		ReferenceAudio: state.CloneRef,
 		Format:         "wav",
 	})
 	if err != nil {
-		return fmt.Errorf("cloning voice: %w", err)
+		return err
 	}
 
-	if err := os.WriteFile(outputPath, audioData, 0644); err != nil {
-		return fmt.Errorf("writing cloned audio: %w", err)
+	return os.WriteFile(outputPath, audioData, 0644)
+}
+
+func (s *SynthesizeStep) combineAudioSegments(ctx context.Context, segments []string, outputPath string) error {
+	if len(segments) == 0 {
+		return fmt.Errorf("no audio segments to combine")
 	}
 
-	state.TargetAudio = outputPath
-	log.Printf("[Synthesize] 克隆合成完成: %s (%d bytes)", outputPath, len(audioData))
+	// Create a file list for FFmpeg concat
+	listPath := outputPath + ".txt"
+	var listContent strings.Builder
+	for _, seg := range segments {
+		listContent.WriteString(fmt.Sprintf("file '%s'\n", seg))
+	}
+	if err := os.WriteFile(listPath, []byte(listContent.String()), 0644); err != nil {
+		return fmt.Errorf("writing concat list: %w", err)
+	}
+	defer os.Remove(listPath)
+
+	args := []string{
+		"-f", "concat",
+		"-safe", "0",
+		"-i", listPath,
+		"-c", "copy",
+		"-y",
+		outputPath,
+	}
+
+	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("combining audio: %w\noutput: %s", err, string(output))
+	}
+
 	return nil
 }
 
@@ -245,24 +312,129 @@ func NewAlignAudioStep(runner *ffmpeg.Runner) *AlignAudioStep {
 func (s *AlignAudioStep) Name() string { return "音频对齐" }
 
 func (s *AlignAudioStep) Run(ctx context.Context, state *State) error {
-	if len(state.SourceSRT) == 0 {
-		log.Printf("[AlignAudio] 无 SRT 片段，跳过对齐")
+	if len(state.SourceSRT) == 0 || len(state.TargetAudioSegments) == 0 {
+		log.Printf("[AlignAudio] 无 SRT 片段或音频片段，跳过对齐")
 		return nil
 	}
 
-	probe, err := s.runner.Probe(ctx, state.TargetAudio)
-	if err != nil {
-		return fmt.Errorf("probing target audio: %w", err)
+	alignedDir := filepath.Join(state.OutputDir, "aligned")
+	if err := os.MkdirAll(alignedDir, 0755); err != nil {
+		return fmt.Errorf("creating aligned directory: %w", err)
 	}
 
-	lastSeg := state.SourceSRT[len(state.SourceSRT)-1]
-	requiredDuration := timeToSeconds(lastSeg.End)
-	if probe.Duration < requiredDuration {
-		log.Printf("[AlignAudio] 目音频时长 (%.1fs) 短于 SRT 时长 (%.1fs)，跳过对齐", probe.Duration, requiredDuration)
-		return nil
+	alignedSegments := make([]string, len(state.TargetAudioSegments))
+
+	for i, audioPath := range state.TargetAudioSegments {
+		sourceSeg := state.SourceSRT[i]
+		sourceDuration := timeToSeconds(sourceSeg.End) - timeToSeconds(sourceSeg.Start)
+
+		probe, err := s.runner.Probe(ctx, audioPath)
+		if err != nil {
+			return fmt.Errorf("probing audio segment %d: %w", i+1, err)
+		}
+		targetDuration := probe.Duration
+
+		alignedPath := filepath.Join(alignedDir, fmt.Sprintf("aligned_%03d.wav", i+1))
+
+		if targetDuration <= sourceDuration {
+			// Case 1: Target is shorter than source - pad with silence
+			if err := s.padAudio(ctx, audioPath, alignedPath, sourceDuration); err != nil {
+				return fmt.Errorf("padding audio segment %d: %w", i+1, err)
+			}
+			log.Printf("[AlignAudio] 片段 %d: 目标 (%.1fs) < 源 (%.1fs)，填充静音", i+1, targetDuration, sourceDuration)
+		} else if targetDuration <= sourceDuration*1.5 {
+			// Case 2: Target is longer but within 1.5x - speed up
+			speedFactor := targetDuration / sourceDuration
+			if err := s.speedUpAudio(ctx, audioPath, alignedPath, speedFactor); err != nil {
+				return fmt.Errorf("speeding up audio segment %d: %w", i+1, err)
+			}
+			log.Printf("[AlignAudio] 片段 %d: 目标 (%.1fs) > 源 (%.1fs)，加速 %.2fx", i+1, targetDuration, sourceDuration, speedFactor)
+		} else {
+			// Case 3: Target is much longer - speed up to 1.5x and adjust timing
+			speedFactor := 1.5
+			newDuration := targetDuration / speedFactor
+			if err := s.speedUpAudio(ctx, audioPath, alignedPath, speedFactor); err != nil {
+				return fmt.Errorf("speeding up audio segment %d: %w", i+1, err)
+			}
+			log.Printf("[AlignAudio] 片段 %d: 目标 (%.1fs) >> 源 (%.1fs)，加速 1.5x，新时长 %.1fs", i+1, targetDuration, sourceDuration, newDuration)
+		}
+
+		alignedSegments[i] = alignedPath
 	}
 
-	log.Printf("[AlignAudio] 音频时长: %.1fs, SRT 时长: %.1fs", probe.Duration, requiredDuration)
+	// Combine aligned segments into final audio
+	combinedPath := filepath.Join(state.OutputDir, "aligned_audio.wav")
+	if err := s.combineAlignedSegments(ctx, alignedSegments, combinedPath); err != nil {
+		return fmt.Errorf("combining aligned segments: %w", err)
+	}
+
+	state.TargetAudio = combinedPath
+	log.Printf("[AlignAudio] 音频对齐完成: %s", combinedPath)
+	return nil
+}
+
+func (s *AlignAudioStep) padAudio(ctx context.Context, input, output string, targetDuration float64) error {
+	args := []string{
+		"-i", input,
+		"-af", fmt.Sprintf("apad=pad_dur=%.3f", targetDuration),
+		"-t", fmt.Sprintf("%.3f", targetDuration),
+		"-y",
+		output,
+	}
+
+	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("padding audio: %w\noutput: %s", err, string(output))
+	}
+
+	return nil
+}
+
+func (s *AlignAudioStep) speedUpAudio(ctx context.Context, input, output string, speedFactor float64) error {
+	args := []string{
+		"-i", input,
+		"-af", fmt.Sprintf("atempo=%.3f", speedFactor),
+		"-y",
+		output,
+	}
+
+	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("speeding up audio: %w\noutput: %s", err, string(output))
+	}
+
+	return nil
+}
+
+func (s *AlignAudioStep) combineAlignedSegments(ctx context.Context, segments []string, outputPath string) error {
+	if len(segments) == 0 {
+		return fmt.Errorf("no aligned segments to combine")
+	}
+
+	listPath := outputPath + ".txt"
+	var listContent strings.Builder
+	for _, seg := range segments {
+		listContent.WriteString(fmt.Sprintf("file '%s'\n", seg))
+	}
+	if err := os.WriteFile(listPath, []byte(listContent.String()), 0644); err != nil {
+		return fmt.Errorf("writing concat list: %w", err)
+	}
+	defer os.Remove(listPath)
+
+	args := []string{
+		"-f", "concat",
+		"-safe", "0",
+		"-i", listPath,
+		"-c", "copy",
+		"-y",
+		outputPath,
+	}
+
+	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("combining aligned segments: %w\noutput: %s", err, string(output))
+	}
+
 	return nil
 }
 
@@ -283,9 +455,11 @@ func (s *GenerateSubtitleStep) Run(ctx context.Context, state *State) error {
 		return fmt.Errorf("no source SRT segments available")
 	}
 
-	targetLines := splitTranslationToLines(state.TargetText, len(state.SourceSRT))
+	if len(state.TargetSegments) == 0 {
+		return fmt.Errorf("no target segments available")
+	}
 
-	assContent := generateBilingualASS(state.SourceSRT, targetLines)
+	assContent := generateBilingualASS(state.SourceSRT, state.TargetSegments)
 
 	assPath := filepath.Join(state.OutputDir, "bilingual.ass")
 	if err := ensureDir(assPath); err != nil {
@@ -298,21 +472,6 @@ func (s *GenerateSubtitleStep) Run(ctx context.Context, state *State) error {
 	state.BilingualSRT = assPath
 	log.Printf("[Subtitle] 双语字幕已生成: %s", assPath)
 	return nil
-}
-
-func splitTranslationToLines(text string, expectedCount int) []string {
-	lines := strings.Split(strings.TrimSpace(text), "\n")
-	result := make([]string, 0, expectedCount)
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line != "" {
-			result = append(result, line)
-		}
-	}
-	for len(result) < expectedCount {
-		result = append(result, "")
-	}
-	return result[:expectedCount]
 }
 
 func generateBilingualASS(segments []srt.Segment, targetLines []string) string {

@@ -60,6 +60,12 @@ type State struct {
 	// TargetSRT contains the translated subtitle segments
 	TargetSRT []srt.Segment
 
+	// TargetSegments contains the translated text for each source segment
+	TargetSegments []string
+
+	// TargetAudioSegments contains the paths to individual synthesized audio segments
+	TargetAudioSegments []string
+
 	// TargetAudio is the path to the synthesized target audio
 	TargetAudio string
 
