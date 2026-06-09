@@ -49,6 +49,34 @@ func NewPipeline(cfg *config.Config) *Pipeline {
 	return p
 }
 
+func NewPipelineWithTimeout(cfg *config.Config, timeout time.Duration) *Pipeline {
+	mimoClient := mimo.NewClient(&mimo.ClientConfig{
+		APIKey:  cfg.MiMo.APIKey,
+		BaseURL: cfg.MiMo.BaseURL,
+		Timeout: timeout,
+	})
+
+	ffmpegRunner := ffmpeg.NewRunner(cfg.FFmpeg.Path, cfg.FFmpeg.FFprobePath)
+
+	p := &Pipeline{
+		config:       cfg,
+		mimoClient:   mimoClient,
+		ffmpegRunner: ffmpegRunner,
+	}
+
+	p.steps = []Step{
+		NewExtractAudioStep(ffmpegRunner),
+		NewTranscribeStep(mimoClient, ffmpegRunner),
+		NewTranslateStep(mimoClient),
+		NewSynthesizeStep(mimoClient),
+		NewAlignAudioStep(ffmpegRunner),
+		NewGenerateSubtitleStep(),
+		NewComposeStep(ffmpegRunner),
+	}
+
+	return p
+}
+
 func (p *Pipeline) SetProgressReporter(reporter ProgressReporter) {
 	p.progress = reporter
 }

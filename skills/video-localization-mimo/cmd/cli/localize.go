@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/gitsang/skills/video-localization-mimo/internal/workflow"
 	"github.com/spf13/cobra"
@@ -27,6 +28,7 @@ func init() {
 	localizeCmd.Flags().String("voice", "", "TTS 音色（可选，不指定则使用默认）")
 	localizeCmd.Flags().String("clone-ref", "", "克隆参考音频路径（可选）")
 	localizeCmd.Flags().Float64("speed", 1.0, "语速（0.5-2.0）")
+	localizeCmd.Flags().Duration("timeout", 120*time.Second, "API 请求超时时间")
 	_ = localizeCmd.MarkFlagRequired("video")
 }
 
@@ -38,6 +40,7 @@ func runLocalize(cmd *cobra.Command, args []string) error {
 	voice, _ := cmd.Flags().GetString("voice")
 	cloneRef, _ := cmd.Flags().GetString("clone-ref")
 	speed, _ := cmd.Flags().GetFloat64("speed")
+	timeout, _ := cmd.Flags().GetDuration("timeout")
 
 	if _, err := os.Stat(videoPath); os.IsNotExist(err) {
 		return fmt.Errorf("视频文件不存在: %s", videoPath)
@@ -66,7 +69,7 @@ func runLocalize(cmd *cobra.Command, args []string) error {
 		CloneRef:    cloneRef,
 	}
 
-	pipeline := workflow.NewPipeline(appConfig)
+	pipeline := workflow.NewPipelineWithTimeout(appConfig, timeout)
 
 	progressReporter := workflow.NewCLIProgressReporter()
 	pipeline.SetProgressReporter(progressReporter)
@@ -78,6 +81,7 @@ func runLocalize(cmd *cobra.Command, args []string) error {
 	fmt.Printf("   源视频: %s\n", videoPath)
 	fmt.Printf("   源语言: %s → 目标语言: %s\n", sourceLang, targetLang)
 	fmt.Printf("   输出目录: %s\n", outputDir)
+	fmt.Printf("   超时时间: %s\n", timeout)
 	fmt.Println()
 
 	err := pipeline.Run(ctx, req)
