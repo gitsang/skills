@@ -1,0 +1,1816 @@
+<!doctype html>
+<html lang="zh-CN"><head><script data-od-sandbox-shim="">(function(){
+  function makeStore(){
+    var data = {};
+    var api = {
+      getItem: function(k){ return Object.prototype.hasOwnProperty.call(data, k) ? data[k] : null; },
+      setItem: function(k, v){ data[k] = String(v); },
+      removeItem: function(k){ delete data[k]; },
+      clear: function(){ data = {}; },
+      key: function(i){ return Object.keys(data)[i] || null; }
+    };
+    Object.defineProperty(api, 'length', { get: function(){ return Object.keys(data).length; } });
+    return api;
+  }
+  function tryShim(name){
+    var works = false;
+    try { works = !!window[name] && typeof window[name].getItem === 'function'; void window[name].length; }
+    catch (_) { works = false; }
+    if (works) return;
+    try { Object.defineProperty(window, name, { configurable: true, value: makeStore() }); }
+    catch (_) { try { window[name] = makeStore(); } catch (__) {} }
+  }
+  tryShim('localStorage');
+  tryShim('sessionStorage');
+  document.addEventListener('click', (e) => {
+    if (!e.target || !(e.target instanceof Element)) return;
+    var link = e.target.closest('a[href]');
+    if (!link) return;
+    var href = link.getAttribute('href');
+    if (href === null) return;
+    var isAnchor = href.startsWith('#') || href === '';
+    if (isAnchor) {
+      e.preventDefault();
+      if (href === '' || href === '#') {
+        window.scrollTo({ top: 0 });
+        history.replaceState(null, '', ' ');
+      } else {
+        var targetId = href.slice(1);
+        var target = targetId ? document.getElementById(targetId) : null;
+        if (target) {
+          target.scrollIntoView();
+          location.hash === href && history.replaceState(null, '', ' ');
+          location.hash = href;
+        }
+      }
+    } else if (link.getAttribute('target') === '_blank') {
+      e.preventDefault();
+      let safe = false;
+      try {
+        var url = new URL(href, location.href);
+        safe =
+          url.protocol === 'http:' ||
+          url.protocol === 'https:' ||
+          url.protocol === 'mailto:';
+      } catch (_) {}
+      safe && window.open(href, '_blank', 'noopener,noreferrer');
+    }
+  });
+})();</script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>东京三日游攻略 · 2026 夏季</title>
+  <style>
+    /* ─── Neutral Modern tokens ───────────────────────────────────────── */
+    :root {
+      --bg: #fafafa;
+      --surface: #ffffff;
+      --surface-warm: var(--surface);
+      --fg: #111111;
+      --fg-2: var(--fg);
+      --muted: #6b6b6b;
+      --meta: var(--muted);
+      --border: #e5e5e5;
+      --border-soft: var(--border);
+      --accent: #2f6feb;
+      --accent-on: #ffffff;
+      --accent-hover: color-mix(in oklab, var(--accent), black 8%);
+      --accent-active: color-mix(in oklab, var(--accent), black 14%);
+      --accent-soft: color-mix(in oklch, var(--accent) 14%, transparent);
+      --fg-soft: color-mix(in oklch, var(--fg) 6%, transparent);
+      --success: #17a34a;
+      --warn: #eab308;
+      --warn-fg: #92400e;
+      --danger: #dc2626;
+      --font-display: "Inter", -apple-system, system-ui, sans-serif;
+      --font-body: "Inter", -apple-system, system-ui, sans-serif;
+      --font-mono: ui-monospace, "JetBrains Mono", monospace;
+      --text-xs: 12px;
+      --text-sm: 14px;
+      --text-base: 16px;
+      --text-lg: 20px;
+      --text-xl: 24px;
+      --text-2xl: 32px;
+      --text-3xl: 48px;
+      --text-4xl: 64px;
+      --leading-body: 1.5;
+      --leading-tight: 1.2;
+      --tracking-display: -0.01em;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-12: 48px;
+      --space-20: 80px;
+      --section-y-desktop: 80px;
+      --section-y-tablet: 48px;
+      --section-y-phone: 32px;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-pill: 9999px;
+      --elev-flat: none;
+      --elev-ring: 0 0 0 1px var(--border);
+      --elev-raised: 0 2px 8px color-mix(in oklab, var(--fg), transparent 92%);
+      --focus-ring: 0 0 0 3px color-mix(in oklab, var(--accent), transparent 70%);
+      --motion-fast: 150ms;
+      --motion-base: 200ms;
+      --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+      --container-max: 1200px;
+      --container-gutter-desktop: 24px;
+      --container-gutter-tablet: 16px;
+      --container-gutter-phone: 12px;
+      /* custom tokens for this artifact */
+      --transport: #2f6feb;
+      --food: #e8740c;
+      --lodging: #17a34a;
+      --attraction: #7c3aed;
+      --fs-h1: clamp(36px, 5vw, 56px);
+      --fs-h2: clamp(24px, 3vw, 32px);
+      --fs-h3: 20px;
+      --fs-lead: 18px;
+      --fs-body: 15px;
+      --fs-meta: 13px;
+      --gap-xs: 8px;
+      --gap-sm: 12px;
+      --gap-md: 20px;
+      --gap-lg: 32px;
+      --gap-xl: 48px;
+      --gap-2xl: 80px;
+      --container: 1120px;
+      --gutter: 24px;
+      --radius: 10px;
+    }
+
+    /* ─── reset & base ──────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-body);
+      font-size: var(--fs-body);
+      line-height: 1.6;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+    }
+    img, svg { display: block; max-width: 100%; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    button { font: inherit; cursor: pointer; }
+    p { text-wrap: pretty; margin: 0; }
+    h1, h2, h3, h4 { text-wrap: balance; margin: 0; }
+
+    /* ─── layout primitives ─────────────────────────────────────────── */
+    .container {
+      max-width: var(--container);
+      margin-inline: auto;
+      padding-inline: var(--gutter);
+    }
+    .section {
+      padding-block: clamp(48px, 8vw, var(--gap-2xl));
+    }
+    .section + .section { border-top: 1px solid var(--border); }
+    .stack { display: flex; flex-direction: column; }
+    .stack > * + * { margin-top: var(--gap-md); }
+    .row { display: flex; align-items: center; gap: var(--gap-md); flex-wrap: wrap; }
+    .row-between { display: flex; align-items: center; justify-content: space-between; gap: var(--gap-md); flex-wrap: wrap; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--gap-lg); }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap-lg); }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--gap-md); }
+    @media (max-width: 920px) {
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      :root { --gutter: 16px; }
+    }
+
+    /* ─── type ──────────────────────────────────────────────────────── */
+    .h1, h1 { font-family: var(--font-display); font-size: var(--fs-h1); line-height: 1.1; letter-spacing: -0.02em; font-weight: 600; }
+    .h2, h2 { font-family: var(--font-display); font-size: var(--fs-h2); line-height: 1.2; letter-spacing: -0.015em; font-weight: 600; }
+    .h3, h3 { font-size: var(--fs-h3); font-weight: 600; line-height: 1.3; }
+    .lead { font-size: var(--fs-lead); line-height: 1.6; color: var(--muted); max-width: 60ch; }
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin: 0 0 var(--gap-sm);
+    }
+    .meta { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--muted); }
+    .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+    /* ─── chrome: nav + footer ──────────────────────────────────────── */
+    .topnav {
+      position: sticky; top: 0; z-index: 10;
+      background: color-mix(in oklch, var(--bg) 92%, transparent);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .topnav-inner { display: flex; align-items: center; justify-content: space-between; padding-block: 14px; }
+    .topnav .logo { font-family: var(--font-display); font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+    .topnav nav { display: flex; gap: var(--gap-md); }
+    .topnav nav a { font-size: 14px; color: var(--muted); text-decoration: none; }
+    .topnav nav a:hover { color: var(--fg); }
+    @media (max-width: 640px) {
+      .topnav nav { display: none; }
+    }
+    .pagefoot { padding-block: var(--gap-xl); color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); }
+    .pagefoot .row-between { flex-wrap: wrap; gap: var(--gap-md); }
+
+    /* ─── buttons ───────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: -0.005em;
+      transition: transform 0.05s ease, background 0.15s ease, border-color 0.15s ease;
+      text-decoration: none;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary { background: var(--accent); color: var(--accent-on); border-color: var(--accent); }
+    .btn-primary:hover { background: var(--accent-hover); text-decoration: none; }
+    .btn-secondary { background: transparent; color: var(--fg); border-color: var(--border); }
+    .btn-secondary:hover { border-color: var(--fg); text-decoration: none; }
+    .btn-ghost { background: transparent; color: var(--fg); border-color: transparent; padding-inline: 8px; }
+    .btn-ghost:hover { color: var(--accent); text-decoration: none; }
+
+    /* ─── card / surface ────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 24px;
+    }
+
+    /* ─── pill / badge / tag ────────────────────────────────────────── */
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .pill-transport { background: color-mix(in oklch, var(--transport) 14%, transparent); color: var(--transport); }
+    .pill-food { background: color-mix(in oklch, var(--food) 14%, transparent); color: var(--food); }
+    .pill-lodging { background: color-mix(in oklch, var(--lodging) 14%, transparent); color: var(--lodging); }
+    .pill-attraction { background: color-mix(in oklch, var(--attraction) 14%, transparent); color: var(--attraction); }
+    .pill-warn { background: color-mix(in oklch, var(--warn) 18%, transparent);       color: var(--warn-fg); }
+    .pill-success { background: color-mix(in oklch, var(--success) 14%, transparent); color: var(--success); }
+
+    .tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 8px;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+    }
+
+    /* ─── hero ──────────────────────────────────────────────────────── */
+    .hero { padding-block: clamp(64px, 10vw, 120px); }
+    .hero-center { text-align: center; max-width: 960px; margin-inline: auto; }
+    .hero h1 { margin-bottom: var(--gap-md); }
+    .hero .lead { margin-inline: auto; margin-bottom: var(--gap-lg); }
+    @media (max-width: 640px) {
+      .hero-center { max-width: 100%; }
+    }
+
+    /* ─── trip metadata grid ────────────────────────────────────────── */
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--gap-lg);
+      margin-top: var(--gap-xl);
+      max-width: 800px;
+      margin-inline: auto;
+    }
+    @media (max-width: 640px) {
+      .meta-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .meta-item {
+      text-align: center;
+      padding: var(--gap-md);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+    }
+    .meta-item .meta-label {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: var(--space-2);
+    }
+    .meta-item .meta-value {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    /* ─── weather cards ─────────────────────────────────────────────── */
+    .weather-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--gap-md);
+    }
+    @media (max-width: 768px) {
+      .weather-grid { grid-template-columns: 1fr; }
+    }
+    .weather-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: var(--gap-lg);
+      text-align: center;
+    }
+    .weather-card .weather-icon {
+      font-size: 48px;
+      margin-bottom: var(--gap-sm);
+      line-height: 1;
+    }
+    .weather-card .weather-date {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: var(--space-2);
+    }
+    .weather-card .weather-temp {
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      font-weight: 600;
+      margin-bottom: var(--space-1);
+    }
+    .weather-card .weather-desc {
+      color: var(--muted);
+      font-size: var(--text-sm);
+      margin-bottom: var(--gap-sm);
+    }
+    .weather-alert {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--gap-sm);
+      padding: var(--gap-md);
+      background: color-mix(in oklch, var(--warn) 10%, transparent);
+      border: 1px solid color-mix(in oklch, var(--warn) 30%, transparent);
+      border-radius: var(--radius-md);
+      margin-top: var(--gap-lg);
+    }
+    .weather-alert-icon { font-size: 20px; flex-shrink: 0; }
+    .weather-alert-text { font-size: var(--text-sm);       color: var(--warn-fg); }
+    .weather-alert-text strong { font-weight: 600; }
+
+    /* ─── route strip ───────────────────────────────────────────────── */
+    .route-strip {
+      display: flex;
+      align-items: center;
+      gap: var(--gap-xs);
+      padding: var(--gap-md) 0;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .route-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-2);
+      min-width: 80px;
+      text-align: center;
+    }
+    .route-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--surface);
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+    .route-label {
+      font-size: var(--text-xs);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .route-line {
+      flex: 1;
+      min-width: 40px;
+      height: 2px;
+      background: var(--border);
+      position: relative;
+    }
+    .route-line::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: -3px;
+      border: 4px solid transparent;
+      border-left: 6px solid var(--border);
+    }
+
+    /* ─── itinerary (timeline) ────────────────────────────────────────── */
+    .day-section { margin-bottom: var(--gap-lg); }
+    details.day-section > summary {
+      display: flex;
+      align-items: center;
+      gap: var(--gap-sm);
+      cursor: pointer;
+      list-style: none;
+      user-select: none;
+      padding: var(--gap-md) 0;
+    }
+    details.day-section > summary::-webkit-details-marker { display: none; }
+    details.day-section > summary::after {
+      content: '';
+      width: 8px; height: 8px;
+      border-right: 2px solid var(--muted);
+      border-bottom: 2px solid var(--muted);
+      transform: rotate(-45deg);
+      transition: transform var(--motion-fast) var(--ease-standard);
+      flex-shrink: 0;
+      margin-left: auto;
+    }
+    details.day-section[open] > summary::after {
+      transform: rotate(45deg);
+    }
+    .day-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px;
+      background: var(--accent); color: var(--accent-on);
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono); font-size: var(--text-sm); font-weight: 600;
+    }
+    .day-title { font-size: var(--text-lg); font-weight: 600; }
+
+    /* Timeline container */
+    .timeline {
+      position: relative;
+      padding-left: 44px;
+      margin-top: var(--gap-sm);
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 15px; top: 0; bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+
+    /* Timeline node (location/attraction/food/lodging) */
+    .tl-node {
+      position: relative;
+      padding-bottom: var(--gap-md);
+    }
+    .tl-node:last-child { padding-bottom: 0; }
+    .tl-dot {
+      position: absolute;
+      left: -44px; top: 4px;
+      width: 32px; height: 32px;
+      display: grid; place-items: center;
+      border-radius: var(--radius-sm);
+      z-index: 1;
+    }
+    .tl-dot-transport { background: color-mix(in oklch, var(--transport) 12%, transparent); color: var(--transport); }
+    .tl-dot-food { background: color-mix(in oklch, var(--food) 12%, transparent); color: var(--food); }
+    .tl-dot-lodging { background: color-mix(in oklch, var(--lodging) 12%, transparent); color: var(--lodging); }
+    .tl-dot-attraction { background: color-mix(in oklch, var(--attraction) 12%, transparent); color: var(--attraction); }
+    .tl-dot svg { width: 16px; height: 16px; }
+
+    .tl-header {
+      display: flex; align-items: center; gap: var(--gap-sm);
+      flex-wrap: wrap;
+      margin-bottom: var(--space-2);
+    }
+    .tl-time {
+      font-family: var(--font-mono); font-size: var(--text-xs); color: var(--muted);
+      min-width: 48px;
+    }
+    .tl-title { font-weight: 500; }
+    .tl-duration {
+      font-family: var(--font-mono); font-size: var(--text-xs); color: var(--muted);
+    }
+    .tl-body {
+      margin-bottom: var(--gap-sm);
+    }
+    .tl-body p { color: var(--muted); font-size: var(--text-sm); margin-bottom: var(--gap-xs); }
+    .tl-tags { display: flex; gap: var(--gap-xs); flex-wrap: wrap; }
+
+    /* Movement indicator (compact transport between locations) */
+    .tl-move {
+      position: relative;
+      display: flex; align-items: center; gap: var(--gap-sm);
+      padding: var(--space-2) 0;
+      color: var(--muted); font-size: var(--text-xs);
+    }
+    .tl-move::before {
+      content: '';
+      position: absolute;
+      left: -44px; top: 50%;
+      width: 32px; height: 2px;
+      background: color-mix(in oklch, var(--transport) 30%, transparent);
+      transform: translateY(-50%);
+    }
+    .tl-move-icon {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-family: var(--font-mono);
+      color: var(--transport);
+    }
+    .tl-move-icon svg { width: 12px; height: 12px; }
+    .tl-move-time { font-family: var(--font-mono); color: var(--muted); }
+
+    /* ─── recommendation cards ──────────────────────────────────────── */
+    .rec-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: var(--gap-lg);
+    }
+    .rec-card .rec-icon {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: var(--gap-md);
+    }
+    .rec-card .rec-icon svg { width: 20px; height: 20px; }
+    .rec-card h3 { font-size: var(--text-base); margin-bottom: var(--space-2); }
+    .rec-card p { color: var(--muted); font-size: var(--text-sm); }
+    .rec-card .rec-meta {
+      margin-top: var(--gap-sm);
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--muted);
+    }
+
+    /* ─── budget table ──────────────────────────────────────────────── */
+    .ds-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .ds-table th, .ds-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+    .ds-table th {
+      color: var(--muted);
+      font-weight: 500;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .ds-table tbody tr:hover { background: var(--fg-soft); }
+    .ds-table .num-col { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+    .ds-table tfoot td { font-weight: 600; border-top: 2px solid var(--fg); }
+
+    /* ─── checklist ─────────────────────────────────────────────────── */
+    .checklist-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--gap-lg);
+    }
+    @media (max-width: 768px) {
+      .checklist-grid { grid-template-columns: 1fr; }
+    }
+    .checklist-group h3 {
+      font-size: var(--text-base);
+      margin-bottom: var(--gap-md);
+      display: flex;
+      align-items: center;
+      gap: var(--gap-sm);
+    }
+    .checklist-group h3 svg { width: 18px; height: 18px; color: var(--accent); }
+    .checklist-item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--gap-sm);
+      padding: var(--space-2) 0;
+    }
+    .checklist-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+    .checklist-item label {
+      font-size: var(--text-sm);
+      color: var(--fg);
+      cursor: pointer;
+    }
+    .checklist-item label span {
+      color: var(--muted);
+      font-size: var(--text-xs);
+    }
+
+    /* ─── references list ───────────────────────────────────────────── */
+    .ref-list { list-style: none; padding: 0; margin: 0; }
+    .ref-list li {
+      padding: var(--gap-md) 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .ref-list li:last-child { border-bottom: none; }
+    .ref-list a {
+      font-size: var(--text-sm);
+      word-break: break-all;
+    }
+    .ref-list .ref-desc {
+      color: var(--muted);
+      font-size: var(--text-xs);
+      margin-top: var(--space-1);
+    }
+
+    /* ─── section header helper ─────────────────────────────────────── */
+    .section-header {
+      margin-bottom: var(--gap-xl);
+    }
+    .section-header h2 {
+      margin-bottom: var(--space-2);
+    }
+    .section-header p {
+      color: var(--muted);
+      font-size: var(--text-sm);
+    }
+  </style>
+<style data-od-tweaks-bridge-style="">
+[data-od-tweaks-hidden] .tw-panel {
+  transform: translateX(calc(100% + 32px)) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.tw-restore { display: none !important; }
+</style><script data-od-tweaks-bridge="">(function(){
+  // Synchronously hide BEFORE the artifact body parses so the panel never
+  // flashes on initial paint. The host removes the attribute via postMessage
+  // once it knows the desired state.
+  document.documentElement.setAttribute('data-od-tweaks-hidden', '');
+
+  var suppressEcho = false;
+  var observer = null;
+
+  function panelEl(){ return document.querySelector('.tw-panel'); }
+
+  function applyClassesToPanel(visible){
+    var panel = panelEl();
+    if (panel) panel.classList.toggle('tw-hidden', !visible);
+  }
+
+  function setPanelVisible(visible){
+    suppressEcho = true;
+    document.documentElement.toggleAttribute('data-od-tweaks-hidden', !visible);
+    applyClassesToPanel(visible);
+    // Clear flag after the MutationObserver has had a chance to fire for this
+    // change so we don't echo our own host-driven toggles back to the host.
+    Promise.resolve().then(function(){ suppressEcho = false; });
+  }
+
+  function postState(){
+    var panel = panelEl();
+    if (!panel) return;
+    try {
+      parent.postMessage({
+        type: 'od:tweaks-panel-state',
+        visible: !panel.classList.contains('tw-hidden'),
+      }, '*');
+    } catch (e) {}
+  }
+
+  function postAvailability(){
+    try {
+      parent.postMessage({
+        type: 'od:tweaks-available',
+        available: !!panelEl(),
+      }, '*');
+    } catch (e) {}
+  }
+
+  function attachObserver(){
+    var panel = panelEl();
+    if (!panel || observer) return;
+    observer = new MutationObserver(function(){
+      if (suppressEcho) return;
+      postState();
+    });
+    observer.observe(panel, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  function onReady(){
+    // Capture the panel authored visibility BEFORE we apply the host hidden
+    // attribute. The bridge sets data-od-tweaks-hidden synchronously in head
+    // (before the body parses), so on entry to onReady the attribute is
+    // always present even though the artifact may have authored the panel
+    // as default-visible. Reading the panel class first is the only place
+    // we can still observe the author intent. Then drive the attribute,
+    // classes, and posted state from that captured value so a default
+    // visible tw-panel reports visible:true and the toolbar toggle starts
+    // ON. Issue surfaced in PR #1643 review.
+    var panel = panelEl();
+    var initialVisible = !!panel && !panel.classList.contains('tw-hidden');
+    document.documentElement.toggleAttribute('data-od-tweaks-hidden', !initialVisible);
+    applyClassesToPanel(initialVisible);
+    attachObserver();
+    postAvailability();
+    // Post the captured initial visibility so the toolbar toggle reflects
+    // the default state on mount. Without this the toggle reads OFF while
+    // a default-visible tw-panel artifact clearly shows its panel and the
+    // user would have to click toggle-on then toggle-off to actually hide.
+    postState();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', onReady);
+  } else {
+    onReady();
+  }
+
+  window.addEventListener('message', function(ev){
+    if (!ev.data || ev.data.type !== 'od:tweaks-panel-visible') return;
+    setPanelVisible(!!ev.data.visible);
+  });
+})();</script></head>
+<body>
+
+  <!-- ═══ NAV ═══════════════════════════════════════════════════════ -->
+  <header class="topnav" data-od-id="topnav">
+    <div class="container topnav-inner" data-od-id="path-0-0">
+      <span class="logo">Tokyo 2026</span>
+      <nav data-od-id="path-0-0-1">
+        <a href="#overview" data-od-id="path-0-0-1-0">总览</a>
+        <a href="#weather" data-od-id="path-0-0-1-1">天气</a>
+        <a href="#itinerary" data-od-id="path-0-0-1-2">行程</a>
+        <a href="#lodging" data-od-id="path-0-0-1-3">住宿</a>
+        <a href="#food" data-od-id="path-0-0-1-4">美食</a>
+        <a href="#attractions" data-od-id="path-0-0-1-5">景点</a>
+        <a href="#budget" data-od-id="path-0-0-1-6">预算</a>
+        <a href="#checklist" data-od-id="path-0-0-1-7">清单</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="content" data-od-id="path-1">
+
+    <!-- ═══ HERO + OVERVIEW ══════════════════════════════════════════ -->
+    <section class="section hero" data-od-id="hero" id="overview">
+      <div class="container hero-center" data-od-id="path-1-0-0">
+        <p class="eyebrow">2026 年夏季 · 三日自由行</p>
+        <h1 data-od-id="path-1-0-0-1">东京三日游攻略</h1>
+        <p class="lead">一份为首次到访东京的旅客准备的实用指南——涵盖交通、美食、景点与预算。</p>
+        <div class="meta-grid">
+          <div class="meta-item">
+            <div class="meta-label">出行日期</div>
+            <div class="meta-value num">7/18–20</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">出行人数</div>
+            <div class="meta-value">2 人</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">总预算</div>
+            <div class="meta-value num">¥12,800</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">住宿天数</div>
+            <div class="meta-value">3 晚</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ WEATHER ═════════════════════════════════════════════════ -->
+    <section class="section" data-od-id="weather" id="weather">
+      <div class="container" data-od-id="path-1-1-0">
+        <div class="section-header">
+          <h2 data-od-id="path-1-1-0-0-0">天气预报</h2>
+          <p>7 月中旬的东京正值梅雨季尾声，高温高湿，请做好防暑防雨准备。</p>
+        </div>
+        <div class="weather-grid">
+          <div class="weather-card">
+            <div class="weather-icon">⛅</div>
+            <div class="weather-date">7 月 18 日 · 周六</div>
+            <div class="weather-temp">32°C</div>
+            <div class="weather-desc">多云转晴，午后阵雨</div>
+            <div class="row" style="justify-content: center; gap: 6px;">
+              <span class="pill pill-warn">降雨概率 40%</span>
+            </div>
+          </div>
+          <div class="weather-card">
+            <div class="weather-icon">🌧️</div>
+            <div class="weather-date">7 月 19 日 · 周日</div>
+            <div class="weather-temp">29°C</div>
+            <div class="weather-desc">中雨，下午转小雨</div>
+            <div class="row" style="justify-content: center; gap: 6px;">
+              <span class="pill pill-warn">降雨概率 80%</span>
+            </div>
+          </div>
+          <div class="weather-card">
+            <div class="weather-icon">☀️</div>
+            <div class="weather-date">7 月 20 日 · 周一</div>
+            <div class="weather-temp">34°C</div>
+            <div class="weather-desc">晴，紫外线强</div>
+            <div class="row" style="justify-content: center; gap: 6px;">
+              <span class="pill pill-success">适合出行</span>
+            </div>
+          </div>
+        </div>
+        <div class="weather-alert">
+          <span class="weather-alert-icon">⚠️</span>
+          <div class="weather-alert-text">
+            <strong>穿衣建议：</strong>轻薄透气衣物为主，建议携带一件薄外套应对室内冷气。7 月 19 日有中雨，请务必带伞或雨衣。室外紫外线较强，建议涂抹防晒霜、佩戴遮阳帽。
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ ROUTE OVERVIEW ══════════════════════════════════════════ -->
+    <section class="section" data-od-id="route" id="route">
+      <div class="container" data-od-id="path-1-2-0">
+        <div class="section-header">
+          <h2 data-od-id="path-1-2-0-0-0">路线总览</h2>
+          <p>三日行程覆盖东京核心区域，从现代潮流到传统文化，一路不走回头路。</p>
+        </div>
+        <div class="route-strip">
+          <div class="route-node">
+            <div class="route-dot"></div>
+            <span class="route-label">新宿</span>
+          </div>
+          <div class="route-line"></div>
+          <div class="route-node">
+            <div class="route-dot"></div>
+            <span class="route-label">涩谷</span>
+          </div>
+          <div class="route-line"></div>
+          <div class="route-node">
+            <div class="route-dot"></div>
+            <span class="route-label">原宿</span>
+          </div>
+          <div class="route-line"></div>
+          <div class="route-node">
+            <div class="route-dot"></div>
+            <span class="route-label">浅草</span>
+          </div>
+          <div class="route-line"></div>
+          <div class="route-node">
+            <div class="route-dot"></div>
+            <span class="route-label">秋叶原</span>
+          </div>
+          <div class="route-line"></div>
+          <div class="route-node">
+            <div class="route-dot"></div>
+            <span class="route-label">银座</span>
+          </div>
+          <div class="route-line"></div>
+          <div class="route-node">
+            <div class="route-dot"></div>
+            <span class="route-label">东京站</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ DAILY ITINERARY ═════════════════════════════════════════ -->
+    <section class="section" data-od-id="itinerary" id="itinerary">
+      <div class="container" data-od-id="path-1-3-0">
+        <div class="section-header">
+          <h2 data-od-id="path-1-3-0-0-0">每日行程</h2>
+          <p>展开每日查看完整时间线，交通移动与到访地点一目了然。</p>
+        </div>
+
+        <!-- Day 1 -->
+        <details class="day-section" open="">
+          <summary>
+            <span class="day-badge">1</span>
+            <span class="day-title">7 月 18 日 · 涩谷—原宿—新宿</span>
+          </summary>
+          <div class="timeline">
+            <div class="tl-node">
+              <div class="tl-dot tl-dot-transport">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6l4-4 4 4M12 2v16M4 18h16"></path></svg>
+              </div>
+              <div class="tl-header">
+                <span class="tl-time">09:00</span>
+                <span class="tl-title">抵达成田机场</span>
+              </div>
+              <div class="tl-body">
+                <p>乘坐航班抵达成田国际机场，入境后前往 JR 售票处兑换东京地铁通票。</p>
+              </div>
+              <div class="tl-tags">
+                <span class="pill pill-transport">机场</span>
+                <span class="tag">免费入境</span>
+              </div>
+            </div>
+
+            <div class="tl-move">
+              <span class="tl-move-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"></rect><circle cx="7" cy="14" r="1.5"></circle><circle cx="17" cy="14" r="1.5"></circle><path d="M6 10h12"></path></svg>
+                成田特快 → 新宿
+              </span>
+              <span class="tl-move-time">约 80 分钟 · ¥3,250/人</span>
+            </div>
+
+            <div class="tl-node">
+              <div class="tl-dot tl-dot-lodging">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V7l9-4 9 4v14"></path><path d="M9 21V11h6v10"></path></svg>
+              </div>
+              <div class="tl-header">
+                <span class="tl-time">12:00</span>
+                <span class="tl-title">入住新宿酒店</span>
+                <span class="tl-duration">约 30 分钟</span>
+              </div>
+              <div class="tl-body">
+                <p>酒店位于新宿站西口步行 5 分钟处，办理入住后稍作休息。寄存行李后出发。</p>
+              </div>
+              <div class="tl-tags">
+                <span class="pill pill-lodging">住宿</span>
+                <span class="tag">¥850 / 晚</span>
+              </div>
+            </div>
+
+            <div class="tl-move">
+              <span class="tl-move-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+                步行
+              </span>
+              <span class="tl-move-time">约 5 分钟</span>
+            </div>
+
+            <div class="tl-node">
+              <div class="tl-dot tl-dot-food">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6 2 11h20c0-5-4.48-9-10-9zM2 13h20v2c0 5-4.48 9-10 9S2 20 2 15v-2z"></path></svg>
+              </div>
+              <div class="tl-header">
+                <span class="tl-time">13:00</span>
+                <span class="tl-title">一蘭拉麵 新宿中央東口店</span>
+                <span class="tl-duration">约 45 分钟</span>
+              </div>
+              <div class="tl-body">
+                <p>东京必吃的一蘭拉麵，豚骨汤底浓郁，可自选面条硬度和辣度。高峰期需排队 20–30 分钟。</p>
+              </div>
+              <div class="tl-tags">
+                <span class="pill pill-food">餐厅</span>
+                <span class="tag">¥1,200 / 人</span>
+              </div>
+            </div>
+
+            <div class="tl-move">
+              <span class="tl-move-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"></rect><circle cx="7" cy="14" r="1.5"></circle><circle cx="17" cy="14" r="1.5"></circle><path d="M6 10h12"></path></svg>
+                地铁 → 涩谷
+              </span>
+              <span class="tl-move-time">约 10 分钟</span>
+            </div>
+
+            <div class="tl-node">
+              <div class="tl-dot tl-dot-attraction">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"></path></svg>
+              </div>
+              <div class="tl-header">
+                <span class="tl-time">14:00</span>
+                <span class="tl-title">涩谷十字路口 &amp; 涩谷天空</span>
+                <span class="tl-duration">约 2 小时</span>
+              </div>
+              <div class="tl-body">
+                <p>世界最繁忙的十字路口，建议在 Starbucks 二楼俯瞰。随后前往涩谷天空展望台，360 度俯瞰东京全景。</p>
+              </div>
+              <div class="tl-tags">
+                <span class="pill pill-attraction">景点</span>
+                <span class="tag">展望台 ¥2,000 / 人</span>
+              </div>
+            </div>
+
+            <div class="tl-move">
+              <span class="tl-move-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+                步行 → 原宿
+              </span>
+              <span class="tl-move-time">约 15 分钟</span>
+            </div>
+
+            <div class="tl-node">
+              <div class="tl-dot tl-dot-attraction">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"></path></svg>
+              </div>
+              <div class="tl-header">
+                <span class="tl-time">16:30</span>
+                <span class="tl-title">原宿竹下通 &amp; 明治神宫</span>
+                <span class="tl-duration">约 2.5 小时</span>
+              </div>
+              <div class="tl-body">
+                <p>竹下通是东京最热闹的购物街之一，适合淘小物件和甜品。之后步行至明治神宫，在都市中感受宁静。</p>
+              </div>
+              <div class="tl-tags">
+                <span class="pill pill-attraction">景点</span>
+                <span class="pill pill-attraction">购物</span>
+                <span class="tag">免费参拜</span>
+              </div>
+            </div>
+
+            <div class="tl-move">
+              <span class="tl-move-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"></rect><circle cx="7" cy="14" r="1.5"></circle><circle cx="17" cy="14" r="1.5"></circle><path d="M6 10h12"></path></svg>
+                地铁 → 新宿
+              </span>
+              <span class="tl-move-time">约 15 分钟</span>
+            </div>
+
+            <div class="tl-node">
+              <div class="tl-dot tl-dot-food">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6 2 11h20c0-5-4.48-9-10-9zM2 13h20v2c0 5-4.48 9-10 9S2 20 2 15v-2z"></path></svg>
+              </div>
+              <div class="tl-header">
+                <span class="tl-time">19:00</span>
+                <span class="tl-title">新宿歌舞伎町 居酒屋晚餐</span>
+                <span class="tl-duration">约 1.5 小时</span>
+              </div>
+              <div class="tl-body">
+                <p>体验日本居酒屋文化，推荐点串烧、刺身拼盘和生啤。氛围热闹，适合放松旅途疲劳。</p>
+              </div>
+              <div class="tl-tags">
+                <span class="pill pill-food">餐厅</span>
+                <span class="tag">¥3,000 / 人</span>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- Day 2 -->
+        <details class="day-section">
+          <summary>
+            <span class="day-badge">2</span>
+            <span class="day-title">7 月 19 日 · 浅草—秋叶原—上野</span>
+          </summary>
+          <div class="timeline">
+            <div class="tl-move">
+              <span class="tl-move-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"></rect><circle cx="7" cy="14" r="1.5"></circle><circle cx="17" cy="14" r="1.5"></circle><path d="M6 10h12"></path></svg>
+                地铁 → 浅草
+              </span>
+              <span class="tl-move-time">约 25 分钟 · 通票覆盖</span>
+            </div>
+
+            <div class="tl-node">
+              <div class="tl-dot tl-dot-attraction">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"></path></svg>
+              </div>
+              <div class="tl-header">
+                <span class="tl-time">09:00</span>
+                <span class="tl-title">浅草寺 &amp; 仲见世通</span>
+                <span class="tl-duration">约 2 小时</span>
+              </div>
+              <div class="tl-body">
+                <p>东京最古老的寺庙，雷门大灯笼是必拍地标。仲见世通可购买人形烧、仙贝等传统小吃。</p>
+              </div>
+              <div class="tl-tags">
+                <span class="pill pill-attraction">景点</span>
+                <span class="tag">免费参拜</span>
+              </div>
+            </div>
+
+            <div class="tl-move">
+              <span class="tl-move-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+                步行
+              </span>
+              <span class="tl-move-time">约 5 分钟</span>
+            </div>
+
+            <div class="tl-node">
+              <div class="tl-dot tl-dot-food">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6 2 11h20c0-5-4.48-9-10-9zM2 13h20v2c0 5-4.48 9-10 9S2 20 2 15v-2z"></path></svg>
+              </div>
+              <div class="tl-header">
+                <span class="tl-time">11:30</span>
+                <span class="tl-title">浅草 天妇罗午餐</span>
+                <span class="tl-duration">约 45 分钟</span>
+              </div>
+              <div class="tl-body">
+                <p>推荐「大黑家」的天妇罗盖饭，虾肉饱满，面衣酥脆，是浅草名物。</p>
+              </div>
+              <div class="tl-tags">
+                <span class="pill pill-food">餐厅</span>
+                <span class="tag">¥1,800 / 人</span>
+              </div>
+            </div>
+
+            <div class="tl-move">
+              <span class="tl-move-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+                步行 → 秋叶原
+              </span>
+              <span class="tl-move-time">约 20 分钟 · 穿越吾妻桥</span>
+            </div>
+
+            <div class="tl-node">
+              <div class="tl-dot tl-dot-attraction">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"></path></svg>
+              </div>
+              <div class="tl-header">
+                <span class="tl-time">13:30</span>
+                <span class="tl-title">秋叶原电器街</span>
+                <span class="tl-duration">约 2.5 小时</span>
+              </div>
+              <div class="tl-body">
+                <p>动漫、游戏、电子产品天堂。推荐逛 Animate、Mandarake 和友都八喜。雨天室内逛街正好。</p>
+              </div>
+              <div class="tl-tags">
+                <span class="pill pill-attraction">购物</span>
+                <span class="pill pill-attraction">景点</span>
+              </div>
+            </div>
+
+            <div class="tl-move">
+              <span class="tl-move-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"></rect><circle cx="7" cy="14" r="1.5"></circle><circle cx="17" cy="14" r="1.5"></circle><path d="M6 10h12"></path></svg>
+                地铁 → 上野
+              </span>
+              <span class="tl-move-time">约 10 分钟</span>
+            </div>
+
+            <div class="tl-node">
+              <div class="tl-dot tl-dot-attraction">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"></path></svg>
+              </div>
+              <div class="tl-header">
+                <span class="tl-time">16:30</span>
+                <span class="tl-title">上野公园 &amp; 阿美横丁</span>
+                <span class="tl-duration">约 2 小时</span>
+              </div>
+              <div class="tl-body">
+                <p>上野公园是东京最大的城市公园，雨天可在上野之森美术馆避雨。阿美横丁是平价购物和小吃街。</p>
+              </div>
+              <div class="tl-tags">
+                <span class="pill pill-attraction">景点</span>
+                <span class="tag">公园免费</span>
+              </div>
+            </div>
+
+            <div class="tl-move">
+              <span class="tl-move-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"></rect><circle cx="7" cy="14" r="1.5"></circle><circle cx="17" cy="14" r="1.5"></circle><path d="M6 10h12"></path></svg>
+                地铁 → 新宿
+              </span>
+              <span class="tl-move-time">约 20 分钟</span>
+            </div>
+
+            <div class="tl-node">
+              <div class="tl-dot tl-dot-food">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6 2 11h20c0-5-4.48-9-10-9zM2 13h20v2c0 5-4.48 9-10 9S2 20 2 15v-2z"></path></svg>
+              </div>
+              <div class="tl-header">
+                <span class="tl-time">19:00</span>
+                <span class="tl-title">回转寿司晚餐</span>
+                <span class="tl-duration">约 1 小时</span>
+              </div>
+              <div class="tl-body">
+                <p>推荐「寿司郎」或「はま寿司」，性价比高，食材新鲜。触屏点餐，方便快捷。</p>
+              </div>
+              <div class="tl-tags">
+                <span class="pill pill-food">餐厅</span>
+                <span class="tag">¥2,000 / 人</span>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- Day 3 -->
+        <details class="day-section">
+          <summary>
+            <span class="day-badge">3</span>
+            <span class="day-title">7 月 20 日 · 银座—东京站—新宿</span>
+          </summary>
+          <div class="timeline">
+            <div class="tl-move">
+              <span class="tl-move-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"></rect><circle cx="7" cy="14" r="1.5"></circle><circle cx="17" cy="14" r="1.5"></circle><path d="M6 10h12"></path></svg>
+                地铁 → 银座
+              </span>
+              <span class="tl-move-time">约 15 分钟 · 通票覆盖</span>
+            </div>
+
+            <div class="tl-node">
+              <div class="tl-dot tl-dot-attraction">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"></path></svg>
+              </div>
+              <div class="tl-header">
+                <span class="tl-time">09:30</span>
+                <span class="tl-title">银座购物</span>
+                <span class="tl-duration">约 2.5 小时</span>
+              </div>
+              <div class="tl-body">
+                <p>银座是东京最高端的购物区。推荐逛三越百货、和光、优衣银座旗舰店。周末中央通变为步行者天国。</p>
+              </div>
+              <div class="tl-tags">
+                <span class="pill pill-attraction">购物</span>
+              </div>
+            </div>
+
+            <div class="tl-move">
+              <span class="tl-move-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+                步行 → 筑地
+              </span>
+              <span class="tl-move-time">约 10 分钟</span>
+            </div>
+
+            <div class="tl-node">
+              <div class="tl-dot tl-dot-food">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6 2 11h20c0-5-4.48-9-10-9zM2 13h20v2c0 5-4.48 9-10 9S2 20 2 15v-2z"></path></svg>
+              </div>
+              <div class="tl-header">
+                <span class="tl-time">12:00</span>
+                <span class="tl-title">筑地场外市场</span>
+                <span class="tl-duration">约 1.5 小时</span>
+              </div>
+              <div class="tl-body">
+                <p>从银座步行约 10 分钟即达。推荐海鲜丼、玉子烧、现烤扇贝。边走边吃，体验东京市井气息。</p>
+              </div>
+              <div class="tl-tags">
+                <span class="pill pill-food">餐厅</span>
+                <span class="pill pill-food">市场</span>
+                <span class="tag">¥2,500 / 人</span>
+              </div>
+            </div>
+
+            <div class="tl-move">
+              <span class="tl-move-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+                步行 → 东京站
+              </span>
+              <span class="tl-move-time">约 15 分钟</span>
+            </div>
+
+            <div class="tl-node">
+              <div class="tl-dot tl-dot-attraction">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"></path></svg>
+              </div>
+              <div class="tl-header">
+                <span class="tl-time">14:00</span>
+                <span class="tl-title">东京站 &amp; 丸之内仲通</span>
+                <span class="tl-duration">约 1.5 小时</span>
+              </div>
+              <div class="tl-body">
+                <p>东京站红砖建筑是重要文化财，丸之内仲通是欧式建筑风格的商业街。适合拍照和购买伴手礼。</p>
+              </div>
+              <div class="tl-tags">
+                <span class="pill pill-attraction">景点</span>
+                <span class="pill pill-attraction">购物</span>
+              </div>
+            </div>
+
+            <div class="tl-move">
+              <span class="tl-move-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"></rect><circle cx="7" cy="14" r="1.5"></circle><circle cx="17" cy="14" r="1.5"></circle><path d="M6 10h12"></path></svg>
+                地铁 → 新宿
+              </span>
+              <span class="tl-move-time">约 20 分钟 · 取行李</span>
+            </div>
+
+            <div class="tl-move">
+              <span class="tl-move-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"></rect><circle cx="7" cy="14" r="1.5"></circle><circle cx="17" cy="14" r="1.5"></circle><path d="M6 10h12"></path></svg>
+                成田特快 → 成田机场
+              </span>
+              <span class="tl-move-time">约 80 分钟 · ¥3,250/人</span>
+            </div>
+
+            <div class="tl-node">
+              <div class="tl-dot tl-dot-transport">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6l4-4 4 4M12 2v16M4 18h16"></path></svg>
+              </div>
+              <div class="tl-header">
+                <span class="tl-time">19:00</span>
+                <span class="tl-title">抵达机场 · 返程</span>
+              </div>
+              <div class="tl-body">
+                <p>建议提前 3 小时到达办理登机手续，机场免税店可做最后采购。</p>
+              </div>
+              <div class="tl-tags">
+                <span class="pill pill-transport">机场</span>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ═══ 住宿推荐 ════════════════════════════════════════════ -->
+    <section class="section" data-od-id="lodging" id="lodging">
+      <div class="container" data-od-id="path-1-4-0">
+        <div class="section-header">
+          <h2 data-od-id="path-1-4-0-0-0">住宿推荐</h2>
+          <p>精选东京高性价比住宿，位置便利、交通可达性好。</p>
+        </div>
+        <div class="grid-3">
+          <div class="rec-card">
+            <div class="rec-icon" style="color: var(--lodging);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V7l9-4 9 4v14"></path><path d="M9 21V11h6v10"></path></svg>
+            </div>
+            <h3 data-od-id="path-1-4-0-1-0-1">新宿华盛顿酒店</h3>
+            <p>位于新宿西口，交通便利，周边餐厅众多。标准双人间含早餐，性价比高。</p>
+            <div class="rec-meta">¥850 / 晚 · 3 晚合计 ¥2,550</div>
+          </div>
+          <div class="rec-card">
+            <div class="rec-icon" style="color: var(--lodging);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V7l9-4 9 4v14"></path><path d="M9 21V11h6v10"></path></svg>
+            </div>
+            <h3 data-od-id="path-1-4-0-1-1-1">浅草旅笼酒店</h3>
+            <p>步行 5 分钟到浅草寺，日式榻榻米房型可选，体验传统住宿氛围。</p>
+            <div class="rec-meta">¥700 / 晚 · 3 晚合计 ¥2,100</div>
+          </div>
+          <div class="rec-card">
+            <div class="rec-icon" style="color: var(--lodging);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V7l9-4 9 4v14"></path><path d="M9 21V11h6v10"></path></svg>
+            </div>
+            <h3 data-od-id="path-1-4-0-1-2-1">上野 APA 酒店</h3>
+            <p>紧邻上野站，阿美横丁步行可达。房间紧凑但干净，适合预算型旅客。</p>
+            <div class="rec-meta">¥550 / 晚 · 3 晚合计 ¥1,650</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 美食推荐 ════════════════════════════════════════════ -->
+    <section class="section" data-od-id="food" id="food">
+      <div class="container" data-od-id="path-1-5-0">
+        <div class="section-header">
+          <h2 data-od-id="path-1-5-0-0-0">美食推荐</h2>
+          <p>东京是全球米其林餐厅最多的城市，从街头小吃到高级料理应有尽有。</p>
+        </div>
+        <div class="grid-3">
+          <div class="rec-card">
+            <div class="rec-icon" style="color: var(--food);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6 2 11h20c0-5-4.48-9-10-9zM2 13h20v2c0 5-4.48 9-10 9S2 20 2 15v-2z"></path></svg>
+            </div>
+            <h3 data-od-id="path-1-5-0-1-0-1">一蘭拉麵 · 涩谷店</h3>
+            <p>豚骨拉面代表，个人隔间用餐体验独特。建议避开 12:00–13:00 高峰。</p>
+            <div class="rec-meta">人均 ¥1,200</div>
+          </div>
+          <div class="rec-card">
+            <div class="rec-icon" style="color: var(--food);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6 2 11h20c0-5-4.48-9-10-9zM2 13h20v2c0 5-4.48 9-10 9S2 20 2 15v-2z"></path></svg>
+            </div>
+            <h3 data-od-id="path-1-5-0-1-1-1">大黑家 · 浅草</h3>
+            <p>创业 130 年的天妇罗名店，虾天妇罗是招牌。排队常超 30 分钟。</p>
+            <div class="rec-meta">人均 ¥2,500</div>
+          </div>
+          <div class="rec-card">
+            <div class="rec-icon" style="color: var(--food);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6 2 11h20c0-5-4.48-9-10-9zM2 13h20v2c0 5-4.48 9-10 9S2 20 2 15v-2z"></path></svg>
+            </div>
+            <h3 data-od-id="path-1-5-0-1-2-1">寿司郎 · 秋叶原店</h3>
+            <p>回转寿司连锁，品质稳定、价格亲民。触屏点餐，适合一人食。</p>
+            <div class="rec-meta">人均 ¥1,500</div>
+          </div>
+          <div class="rec-card">
+            <div class="rec-icon" style="color: var(--food);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6 2 11h20c0-5-4.48-9-10-9zM2 13h20v2c0 5-4.48 9-10 9S2 20 2 15v-2z"></path></svg>
+            </div>
+            <h3 data-od-id="path-1-5-0-1-3-1">筑地海鲜丼</h3>
+            <p>筑地市场周边多家海鲜丼专门店，新鲜刺身盖饭是早餐首选。</p>
+            <div class="rec-meta">人均 ¥2,000</div>
+          </div>
+          <div class="rec-card">
+            <div class="rec-icon" style="color: var(--food);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6 2 11h20c0-5-4.48-9-10-9zM2 13h20v2c0 5-4.48 9-10 9S2 20 2 15v-2z"></path></svg>
+            </div>
+            <h3 data-od-id="path-1-5-0-1-4-1">新宿思出横丁</h3>
+            <p>居酒屋串烧聚集地，烟火气十足。适合晚间体验日本下班文化。</p>
+            <div class="rec-meta">人均 ¥2,000–3,000</div>
+          </div>
+          <div class="rec-card">
+            <div class="rec-icon" style="color: var(--food);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6 2 11h20c0-5-4.48-9-10-9zM2 13h20v2c0 5-4.48 9-10 9S2 20 2 15v-2z"></path></svg>
+            </div>
+            <h3 data-od-id="path-1-5-0-1-5-1">银座资生堂 Parlor</h3>
+            <p>百年甜品老店，下午茶套餐精致优雅。适合歇脚与拍照。</p>
+            <div class="rec-meta">人均 ¥1,800</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 景点推荐 ════════════════════════════════════════════ -->
+    <section class="section" data-od-id="attractions" id="attractions">
+      <div class="container" data-od-id="path-1-6-0">
+        <div class="section-header">
+          <h2 data-od-id="path-1-6-0-0-0">景点推荐</h2>
+          <p>东京地标与文化体验，从千年神堂到现代潮流街区。</p>
+        </div>
+        <div class="grid-3">
+          <div class="rec-card">
+            <div class="rec-icon" style="color: var(--attraction);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"></path></svg>
+            </div>
+            <h3 data-od-id="path-1-6-0-1-0-1">浅草寺 · 雷门</h3>
+            <p>东京最古老的寺庙，仲见世商业街可购传统小吃与纪念品。建议清晨到访。</p>
+            <div class="rec-meta">免费入场</div>
+          </div>
+          <div class="rec-card">
+            <div class="rec-icon" style="color: var(--attraction);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"></path></svg>
+            </div>
+            <h3 data-od-id="path-1-6-0-1-1-1">涩谷十字路口</h3>
+            <p>全球最繁忙的十字路口，每绿灯 3000 人同时过马路。忠犬八公像在旁。</p>
+            <div class="rec-meta">免费 · 拍照打卡</div>
+          </div>
+          <div class="rec-card">
+            <div class="rec-icon" style="color: var(--attraction);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"></path></svg>
+            </div>
+            <h3 data-od-id="path-1-6-0-1-2-1">明治神宫</h3>
+            <p>位于原宿旁的都市森林，供奉明治天皇。高大的鸟居与林荫参道令人平静。</p>
+            <div class="rec-meta">免费入场</div>
+          </div>
+          <div class="rec-card">
+            <div class="rec-icon" style="color: var(--attraction);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"></path></svg>
+            </div>
+            <h3 data-od-id="path-1-6-0-1-3-1">东京晴空塔</h3>
+            <p>634 米电波塔，展望台可 360° 俯瞰东京。天气好时可远眺富士山。</p>
+            <div class="rec-meta">展望台 ¥2,100</div>
+          </div>
+          <div class="rec-card">
+            <div class="rec-icon" style="color: var(--attraction);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"></path></svg>
+            </div>
+            <h3 data-od-id="path-1-6-0-1-4-1">秋叶原电器街</h3>
+            <p>动漫、游戏、电子产品天堂。女仆咖啡厅与扭蛋机是独特体验。</p>
+            <div class="rec-meta">免费逛街</div>
+          </div>
+          <div class="rec-card">
+            <div class="rec-icon" style="color: var(--attraction);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"></path></svg>
+            </div>
+            <h3 data-od-id="path-1-6-0-1-5-1">银座中央通</h3>
+            <p>高端购物街区，周日步行者天国。三越、和光、优衣库旗舰店云集。</p>
+            <div class="rec-meta">免费逛街</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ BUDGET ══════════════════════════════════════════════════ -->
+    <section class="section" data-od-id="budget" id="budget">
+      <div class="container" data-od-id="path-1-7-0">
+        <div class="section-header">
+          <h2 data-od-id="path-1-7-0-0-0">预算明细</h2>
+          <p>以下为 2 人 3 天预估费用，实际花费可能因个人消费习惯有所浮动。</p>
+        </div>
+        <table class="ds-table">
+          <thead>
+            <tr>
+              <th>项目</th>
+              <th>明细</th>
+              <th class="num-col">单价</th>
+              <th class="num-col">小计</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>交通</td>
+              <td>N'EX 往返 × 2 人</td>
+              <td class="num-col">¥3,250</td>
+              <td class="num-col">¥6,500</td>
+            </tr>
+            <tr>
+              <td></td>
+              <td>东京地铁 72 小时通票 × 2</td>
+              <td class="num-col">¥1,500</td>
+              <td class="num-col">¥3,000</td>
+            </tr>
+            <tr>
+              <td>住宿</td>
+              <td>新宿华盛顿酒店 · 3 晚</td>
+              <td class="num-col">¥850</td>
+              <td class="num-col">¥2,550</td>
+            </tr>
+            <tr>
+              <td>餐饮</td>
+              <td>早餐（酒店含）</td>
+              <td class="num-col">—</td>
+              <td class="num-col">¥0</td>
+            </tr>
+            <tr>
+              <td></td>
+              <td>午餐 × 3 天 × 2 人</td>
+              <td class="num-col">¥1,500</td>
+              <td class="num-col">¥9,000</td>
+            </tr>
+            <tr>
+              <td></td>
+              <td>晚餐 × 3 天 × 2 人</td>
+              <td class="num-col">¥2,500</td>
+              <td class="num-col">¥15,000</td>
+            </tr>
+            <tr>
+              <td>门票</td>
+              <td>涩谷天空展望台 × 2</td>
+              <td class="num-col">¥2,000</td>
+              <td class="num-col">¥4,000</td>
+            </tr>
+            <tr>
+              <td>其他</td>
+              <td>伴手礼、零食、应急</td>
+              <td class="num-col">—</td>
+              <td class="num-col">¥5,000</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3"><strong>合计</strong></td>
+              <td class="num-col"><strong>¥12,800</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- ═══ CHECKLIST ═══════════════════════════════════════════════ -->
+    <section class="section" data-od-id="checklist" id="checklist">
+      <div class="container" data-od-id="path-1-8-0">
+        <div class="section-header">
+          <h2 data-od-id="path-1-8-0-0-0">检查清单</h2>
+          <p>勾选已准备好的物品，确保出行万无一失。</p>
+        </div>
+        <div class="checklist-grid">
+          <div class="checklist-group">
+            <h3 data-od-id="path-1-8-0-1-0-0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path></svg>
+              携带物品
+            </h3>
+            <div class="checklist-item">
+              <input type="checkbox" id="c1" data-od-id="path-1-8-0-1-0-1-0">
+              <label for="c1">护照 &amp; 签证 <span>（有效期 6 个月以上）</span></label>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="c2" data-od-id="path-1-8-0-1-0-2-0">
+              <label for="c2">机票 &amp; 酒店预订确认单</label>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="c3" data-od-id="path-1-8-0-1-0-3-0">
+              <label for="c3">日元现金 <span>（建议 5 万日元）</span></label>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="c4" data-od-id="path-1-8-0-1-0-4-0">
+              <label for="c4">信用卡 <span>（Visa / Mastercard）</span></label>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="c5" data-od-id="path-1-8-0-1-0-5-0">
+              <label for="c5">手机 &amp; 充电器 &amp; 转换插头</label>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="c6" data-od-id="path-1-8-0-1-0-6-0">
+              <label for="c6">随身 Wi-Fi 或 SIM 卡</label>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="c7" data-od-id="path-1-8-0-1-0-7-0">
+              <label for="c7">折叠伞 / 雨衣</label>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="c8" data-od-id="path-1-8-0-1-0-8-0">
+              <label for="c8">防晒霜 &amp; 遮阳帽</label>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="c9" data-od-id="path-1-8-0-1-0-9-0">
+              <label for="c9">舒适步行鞋</label>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="c10" data-od-id="path-1-8-0-1-0-10-0">
+              <label for="c10">常用药品 <span>（肠胃药、创可贴）</span></label>
+            </div>
+          </div>
+          <div class="checklist-group">
+            <h3 data-od-id="path-1-8-0-1-1-0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 8v4M12 16h.01"></path></svg>
+              注意事项
+            </h3>
+            <div class="checklist-item">
+              <input type="checkbox" id="n1" data-od-id="path-1-8-0-1-1-1-0">
+              <label for="n1">提前购买东京地铁通票</label>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="n2" data-od-id="path-1-8-0-1-1-2-0">
+              <label for="n2">下载 Google Maps 离线地图</label>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="n3" data-od-id="path-1-8-0-1-1-3-0">
+              <label for="n3">确认酒店入住 / 退房时间</label>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="n4" data-od-id="path-1-8-0-1-1-4-0">
+              <label for="n4">了解日本垃圾分类规则</label>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="n5" data-od-id="path-1-8-0-1-1-5-0">
+              <label for="n5">准备小额日元 <span>（自动贩卖机、小店）</span></label>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="n6" data-od-id="path-1-8-0-1-1-6-0">
+              <label for="n6">购买旅行保险</label>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="n7" data-od-id="path-1-8-0-1-1-7-0">
+              <label for="n7">告知银行境外消费计划</label>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="n8" data-od-id="path-1-8-0-1-1-8-0">
+              <label for="n8">备份护照和签证电子版</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ REFERENCES ══════════════════════════════════════════════ -->
+    <section class="section" data-od-id="references" id="references">
+      <div class="container" data-od-id="path-1-9-0">
+        <div class="section-header">
+          <h2 data-od-id="path-1-9-0-0-0">参考资料</h2>
+          <p>实用网站与官方信息源，出行前建议收藏。</p>
+        </div>
+        <ul class="ref-list">
+          <li>
+            <a href="https://www.japan-guide.com/" target="_blank" rel="noopener" data-od-id="path-1-9-0-1-0-0">https://www.japan-guide.com/</a>
+            <div class="ref-desc">日本旅行综合指南，景点、交通、住宿信息齐全</div>
+          </li>
+          <li>
+            <a href="https://www.tokyometro.jp/tc/" target="_blank" rel="noopener" data-od-id="path-1-9-0-1-1-0">https://www.tokyometro.jp/tc/</a>
+            <div class="ref-desc">东京地铁官方网站，线路图、票价、通票信息</div>
+          </li>
+          <li>
+            <a href="https://www.jreast.co.jp/sc/" target="_blank" rel="noopener" data-od-id="path-1-9-0-1-2-0">https://www.jreast.co.jp/sc/</a>
+            <div class="ref-desc">JR 东日本官方网站，N'EX 成田特快购票</div>
+          </li>
+          <li>
+            <a href="https://www.jnto.go.jp/" target="_blank" rel="noopener" data-od-id="path-1-9-0-1-3-0">https://www.jnto.go.jp/</a>
+            <div class="ref-desc">日本国家旅游局，最新旅行政策和活动信息</div>
+          </li>
+          <li>
+            <a href="https://weather.yahoo.co.jp/weather/" target="_blank" rel="noopener" data-od-id="path-1-9-0-1-4-0">https://weather.yahoo.co.jp/weather/</a>
+            <div class="ref-desc">Yahoo 日本天气，出行前查看最新天气预报</div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ═══ FOOTER ═══════════════════════════════════════════════════ -->
+  <footer class="pagefoot" data-od-id="footer">
+    <div class="container row-between" data-od-id="path-2-0">
+      <span>© 2026 Tokyo Travel Guide</span>
+      <span class="meta">本攻略仅供参考 · 实际行程请以当地信息为准</span>
+    </div>
+  </footer>
+
+
+
+<script data-od-snapshot-bridge="">(function(){
+  var SNAPSHOT_STYLE_PROPS = [
+    'display','position','box-sizing','width','height','min-width','max-width','min-height','max-height',
+    'margin','margin-top','margin-right','margin-bottom','margin-left',
+    'padding','padding-top','padding-right','padding-bottom','padding-left',
+    'border','border-top','border-right','border-bottom','border-left','border-radius',
+    'font','font-family','font-size','font-weight','font-style','line-height','letter-spacing',
+    'color','background-color','opacity','transform','transform-origin','overflow','overflow-x','overflow-y',
+    'white-space','text-align','vertical-align','object-fit','object-position',
+    'flex','flex-direction','flex-wrap','flex-grow','flex-shrink','flex-basis',
+    'grid','grid-template-columns','grid-template-rows','grid-column','grid-row',
+    'gap','row-gap','column-gap','align-items','align-content','align-self',
+    'justify-items','justify-content','justify-self','inset','top','right','bottom','left',
+    'z-index','box-shadow','text-shadow'
+  ];
+  function copyComputedStyle(source, target){
+    if (!source || !target || source.nodeType !== 1 || target.nodeType !== 1) return;
+    var computed = window.getComputedStyle(source);
+    var style = target.getAttribute('style') || '';
+    for (var i = 0; i < SNAPSHOT_STYLE_PROPS.length; i++){
+      var prop = SNAPSHOT_STYLE_PROPS[i];
+      var value = computed.getPropertyValue(prop);
+      if (value) style += prop + ':' + value + ';';
+    }
+    target.setAttribute('style', style);
+  }
+  function syncElementState(source, target){
+    var tag = source.tagName ? source.tagName.toLowerCase() : '';
+    if (tag === 'img' && source.currentSrc) target.setAttribute('src', source.currentSrc);
+    if (tag === 'input' || tag === 'textarea') target.setAttribute('value', source.value || '');
+    if (tag === 'canvas') {
+      try {
+        var img = document.createElement('img');
+        img.setAttribute('src', source.toDataURL('image/png'));
+        img.setAttribute('style', target.getAttribute('style') || '');
+        target.parentNode && target.parentNode.replaceChild(img, target);
+      } catch (_) {}
+    }
+  }
+  function inlineSnapshotStyles(originalRoot, cloneRoot){
+    copyComputedStyle(originalRoot, cloneRoot);
+    syncElementState(originalRoot, cloneRoot);
+    var originals = originalRoot.querySelectorAll('*');
+    var clones = cloneRoot.querySelectorAll('*');
+    var count = Math.min(originals.length, clones.length, 3500);
+    for (var i = 0; i < count; i++){
+      copyComputedStyle(originals[i], clones[i]);
+      syncElementState(originals[i], clones[i]);
+    }
+    var scripts = cloneRoot.querySelectorAll('script');
+    for (var s = scripts.length - 1; s >= 0; s--) scripts[s].remove();
+    var links = cloneRoot.querySelectorAll('link[rel~="stylesheet"], link[rel~="preload"], link[rel~="preconnect"]');
+    for (var l = links.length - 1; l >= 0; l--) links[l].remove();
+    var styles = cloneRoot.querySelectorAll('style');
+    for (var st = 0; st < styles.length; st++) {
+      styles[st].textContent = (styles[st].textContent || '')
+        .replace(/@import[^;]+;/gi, '')
+        .replace(/@font-face\s*\{[^}]*\}/gi, '');
+    }
+  }
+  function waitForImages(){
+    var imgs = Array.prototype.slice.call(document.images || []);
+    return Promise.all(imgs.map(function(img){
+      if (img.complete) return Promise.resolve();
+      return new Promise(function(resolve){
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+      });
+    }));
+  }
+  function scrollOffset(){
+    var doc = document.documentElement;
+    var body = document.body;
+    return {
+      x: Math.max(window.scrollX || 0, doc ? doc.scrollLeft || 0 : 0, body ? body.scrollLeft || 0 : 0),
+      y: Math.max(window.scrollY || 0, doc ? doc.scrollTop || 0 : 0, body ? body.scrollTop || 0 : 0)
+    };
+  }
+  function escapeAttribute(value){
+    return String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+  function renderSnapshot(id){
+    var w = Math.max(1, window.innerWidth || document.documentElement.clientWidth || 1);
+    var h = Math.max(1, window.innerHeight || document.documentElement.clientHeight || 1);
+    var dpr = window.devicePixelRatio || 1;
+    var docW = Math.max(w, document.documentElement.scrollWidth || 0, document.body ? document.body.scrollWidth : 0);
+    var docH = Math.max(h, document.documentElement.scrollHeight || 0, document.body ? document.body.scrollHeight : 0);
+    var clone = document.documentElement.cloneNode(true);
+    clone.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+    inlineSnapshotStyles(document.documentElement, clone);
+    var scroll = scrollOffset();
+    var cloneBody = clone.querySelector('body');
+    var rootStyle = clone.getAttribute('style') || '';
+    var bodyStyle = cloneBody ? cloneBody.getAttribute('style') || '' : '';
+    var bodyContent = cloneBody ? cloneBody.innerHTML : clone.innerHTML;
+    var wrapperStyle = rootStyle + bodyStyle +
+      'margin:0;position:relative;left:' + (-scroll.x) + 'px;top:' + (-scroll.y) + 'px;' +
+      'width:' + docW + 'px;height:' + docH + 'px;overflow:visible;';
+    var html = '<div xmlns="http://www.w3.org/1999/xhtml" style="' + escapeAttribute(wrapperStyle) + '">' + bodyContent + '</div>';
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">' +
+      '<foreignObject x="0" y="0" width="' + docW + '" height="' + docH + '">' +
+      html +
+      '</foreignObject></svg>';
+    var img = new Image();
+    img.onload = function(){
+      try {
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.floor(w * dpr));
+        canvas.height = Math.max(1, Math.floor(h * dpr));
+        var ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('no 2d context');
+        ctx.scale(dpr, dpr);
+        ctx.drawImage(img, 0, 0, w, h);
+        window.parent.postMessage({ type: 'od:snapshot:result', id: id, dataUrl: canvas.toDataURL('image/png'), w: canvas.width, h: canvas.height }, '*');
+      } catch (err) {
+        window.parent.postMessage({ type: 'od:snapshot:result', id: id, error: String(err && err.message || err) }, '*');
+      }
+    };
+    function encodedSvgDataUrl(){
+      var encoded = encodeURIComponent(svg);
+      return 'data:image/svg+xml;charset=utf-8,' + encoded;
+    }
+    img.onerror = function(){
+      window.parent.postMessage({ type: 'od:snapshot:result', id: id, error: 'snapshot image failed' }, '*');
+    };
+    img.src = encodedSvgDataUrl();
+  }
+  window.addEventListener('message', function(ev){
+    var data = ev && ev.data;
+    if (!data || data.type !== 'od:snapshot' || !data.id) return;
+    waitForImages().then(function(){ renderSnapshot(String(data.id)); });
+  });
+})();</script><script data-od-srcdoc-transport-activation="">(function(){
+  window.addEventListener('message', function(ev){
+    var data = ev && ev.data;
+    if (!data || data.type !== 'od:srcdoc-transport-activate' || typeof data.html !== 'string') return;
+    document.open();
+    document.write(data.html);
+    document.close();
+  });
+})();</script></body></html>
