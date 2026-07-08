@@ -2,6 +2,6 @@
 __pycache__
 
 # Agents
-.agents
+#.agents
 .sisyphus
 skills-lock.json
