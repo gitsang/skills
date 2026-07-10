@@ -9,29 +9,23 @@ description: Use when converting PDF files to Markdown format, extracting text a
 
 核心原则：**还原 PDF 的阅读顺序，不打乱、不翻译、不丢弃。**
 
-## 工作流
+## 工作流（两阶段）
 
-```dot
-digraph when_flowchart {
-    "PDF 文件存在？" [shape=diamond];
-    "确认章节范围" [shape=box];
-    "运行 pdf2md.py 提取" [shape=box];
-    "检查输出" [shape=box];
-    "需要插入图片？" [shape=diamond];
-    "LLM 处理文本" [shape=box];
-    "运行 postprocess 插入图片" [shape=box];
-    "完成" [shape=doublecircle];
-
-    "PDF 文件存在？" -> "确认章节范围" [label="yes"];
-    "确认章节范围" -> "运行 pdf2md.py 提取";
-    "运行 pdf2md.py 提取" -> "检查输出";
-    "检查输出" -> "需要插入图片？" [label="有图片"];
-    "检查输出" -> "完成" [label="无图片"];
-    "需要插入图片？" -> "LLM 处理文本" [label="yes"];
-    "LLM 处理文本" -> "运行 postprocess 插入图片";
-    "运行 postprocess 插入图片" -> "完成";
-}
 ```
+阶段 1: pdf2md 提取  →  _source.md (保留所有原始标记，只读)
+阶段 2: LLM 格式化   →  ChX.md (去除 page 标记，IMG 转 md 语法)
+阶段 3: 合并         →  合并文档 (调整图片路径为 images/)
+```
+
+### ⚠️ 铁律（长期教训总结）
+
+| 序号 | 规则 | 原因 |
+|------|------|------|
+| 1 | **永远不要修改 `_source.md` 文件** | 它们是唯一的原始参照，弄丢了只能重新提取 PDF |
+| 2 | **subagent prompt 必须用绝对路径** | `Output: Ch4.md` 会导致 agent 写错位置，用 `Output: /full/path/Ch4.md` |
+| 3 | **操作前验证 `_source.md` 有标记** | 确认 `grep '<!-- page ' *_source.md` 行数正确后再格式化 |
+| 4 | **sed/批量操作严格排除 `_source.md`** | 用 `for f in Ch[0-9]*.md; do [[ $f == *_source.md ]] && continue; ...` 不可靠时改用显式列表 |
+| 5 | **先确认 PDF 准确页数再定章节范围** | 不同版本的同一 PDF 页数可能不同（303 vs 305），用 `pdfplumber` 先 `len(pdf.pages)` |
 
 ### 1. 确认章节范围
 
@@ -54,29 +48,90 @@ python scripts/pdf2md.py input.pdf --toc -o output_dir/
 
 ### 3. 检查输出
 
-输出目录结构：
+最终输出目录结构：
 
 ```
 output_dir/
-├── metadata.json            # 源文件、总页数、章节信息
-├── images/                  # 提取的图片（按章节重命名）
+├── metadata.json                            # 源文件、总页数、章节信息
+├── images/                                  # 提取的图片（按章节重命名）
 │   ├── Ch1_p5_Im0.png
 │   └── Ch2_p15_Im0.jpg
-└── chapters/                # 每章的 Markdown 和元数据
-    ├── Ch1_source.md
+└── chapters/
+    ├── Ch1_source.md                        # ⚠️ 只读！pdf2md 原始提取
     ├── Ch1_meta.json
-    ├── Ch2_source.md
-    └── Ch2_meta.json
+    ├── Ch1.md                               # LLM 格式化后（无 page 标记，IMG→![]()）
+    ├── Ch2_source.md                        # ⚠️ 只读！
+    ├── Ch2_meta.json
+    └── Ch2.md                               # LLM 格式化后
 ```
 
-`_source.md` 中：
-- `<!-- page N -->` 标记每页起始
-- `<!-- IMG src=xxx -->` 标记图片位置
-- 文字按阅读顺序排列，标题自动识别
+**两套文件职责：**
 
-### 4. 后处理（需要时）
+| 文件 | 角色 | 页标记 | 图标记 | 修改 |
+|------|------|--------|--------|------|
+| `ChX_source.md` | 原始参照 | `<!-- page N -->` | `<!-- IMG src=X -->` | **永远不改** |
+| `ChX.md` | 可读成品 | 无 | `![](../images/X)` | 可编辑 |
 
-如果 source.md 被 LLM 处理过（比如格式整理），需要用 postprocess 将图片按比例插回：
+### 4. 格式化（LLM 处理 `_source.md` → `ChX.md`）
+
+提取后 `_source.md` 是原始文本（pdfplumber 提取的粗糙输出），需要用 subagent 格式化为干净的 Markdown。
+
+**标记转换规则（核心区别）：**
+
+| 标记 | `_source.md`（保留） | `ChX.md`（格式化后） |
+|------|---------------------|----------------------|
+| `<!-- page N -->` | ✅ 保留 | ❌ 移除 |
+| `<!-- IMG src=xxx -->` | ✅ 保留 | `![](../images/xxx)` |
+
+**subagent prompt 模板：**
+
+```
+Read /absolute/path/ChX_source.md, format it, WRITE to /absolute/path/ChX.md.
+
+Rules:
+1. REMOVE all <!-- page N --> lines entirely
+2. CONVERT <!-- IMG src=FILENAME --> to ![](../images/FILENAME)
+3. Join broken mid-sentence lines into paragraphs
+4. Fix tables to | col | col | markdown format
+5. Add heading hierarchy: ## X. Title → ### X.Y → #### X.Y.Z
+6. Remove per-page header/footer boilerplate
+7. English only, NO TRANSLATION
+8. No commentary or notes
+```
+
+**大章节拆分**：>1500 行的 `_source.md` 分成多个 subagent 并行处理，最后用 `cat part1.md part2.md > ChX.md` 合并。
+
+**格式化完成后验证**：
+```bash
+# _source.md 标记必须完好
+grep -c '<!-- page ' chapters/Ch*_source.md
+# Ch*.md 无残留标记
+grep -rl '<!-- page ' chapters/Ch*.md    # 应该无输出
+grep -rl '<\!-- IMG' chapters/Ch*.md     # 应该无输出
+```
+
+### 5. 合并文档
+
+将所有 `ChX.md` 合并为一个完整文档，加上目录：
+
+```bash
+{
+  echo "# Document Title"
+  echo "## Table of Contents"
+  for f in chapters/Ch*.md; do
+    title=$(head -3 "$f" | grep '^## ' | head -1 | sed 's/^## //')
+    printf -- "- [%s: %s](#%s)\n" "$(basename $f .md)" "$title" "$(basename $f .md)"
+  done
+  for f in chapters/Ch*.md; do cat "$f" && echo; done
+} > merged.md
+
+# 修正图片路径：../images/ → images/（合并文档在根目录）
+sed -i 's|](/\.\./images/|](/images/|g' merged.md
+```
+
+### 6. 后处理（图片插入，可选）
+
+如果还需要精确按比例插入图片（如翻译后行数变化），用 postprocess：
 
 ```bash
 python scripts/pdf2md-postprocess.py <处理后的.md> <meta.json> <images目录>
@@ -112,6 +167,9 @@ brew install mupdf-tools
 
 | 问题 | 原因 | 处理 |
 |------|------|------|
+| `_source.md` 标记被清空 | sed/批量操作误伤了源文件 | **永久教训**：永远不批量操作 `_source.md`，用显式列表排除 |
+| subagent 输出文件缺失 | prompt 用了相对路径 `Output: Ch4.md` | **总是用绝对路径** |
+| PDF 提取失败 | 章节页码范围超出 PDF 实际页数 | 先用 `len(pdf.pages)` 确认总页数再定范围 |
 | 章节检测不准 | 目录格式不标准 | 改用 `--chapters` 手动指定页码 |
 | 图片提取失败 | 缺少 `mutool` | 安装 mupdf-tools 或接受缺图 |
 | 正文顺序错乱 | 多栏排版 | pdfplumber 按 top→x0 排序，多栏可能需要调整 |

@@ -10,6 +10,8 @@ the `skills` CLI.
 - `skills/first-principles-design` - Concept-first software design workflow for
   converging expanding requirements into stable module boundaries and design
   documents.
+- `skills/pdf2md` - PDF to Markdown conversion workflow using llm subagent for
+  formatting.
 - `skills/procurement-analysis` - Product/vendor comparison and procurement
   decision analysis workflow.
 - `skills/team-debate` - Team-mode debate workflow for one-issue-at-a-time
@@ -23,23 +25,7 @@ the `skills` CLI.
 Install a skill from this repository with:
 
 ```bash
-npx skills add gitsang/skills --skill clip
-```
-
-```bash
-npx skills add gitsang/skills --skill first-principles-design
-```
-
-```bash
-npx skills add gitsang/skills --skill procurement-analysis
-```
-
-```bash
-npx skills add gitsang/skills --skill team-debate
-```
-
-```bash
-npx skills add gitsang/skills --skill video-localization
+npx skills add gitsang/skills --skill {SKILL_NAME}
 ```
 
 Install all skills from this repository with:
@@ -49,7 +35,3 @@ npx skills add gitsang/skills
 ```
 
 Installed skills are copied into the agent skills directory, such as `.agents/skills/`.
-
-## Notes
-
-Use `npx skills add <owner>/<repo> --skill <name>` for agent skills.
