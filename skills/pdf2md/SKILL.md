@@ -119,20 +119,74 @@ Ch3_source.md (2800 行)
 Read /absolute/path/ChX_source.md.
 Write formatted output to /absolute/path/ChX.md.
 
-Format the raw PDF extraction into clean markdown by doing these:
-- Remove every <!-- page N --> comment line from the text
-- Replace each <!-- IMG src=FILENAME --> with an image link: ![](../images/FILENAME)
-- Join lines that were split mid-sentence by pdfplumber into continuous paragraphs
-- Convert broken table text into proper markdown tables (| col | col | format)
-- Apply heading hierarchy: ## X. Chapter Title → ### X.Y Section → #### X.Y.Z Subsection
-- Strip repeated page headers and footers from the body text
-- Keep all original text in English — no translation, no summarization, no commentary
+You are formatting raw PDF extraction (pdfplumber output) into clean Markdown.
+The source text has KNOWN extraction artifacts — your job is to fix ALL of them.
+
+## Extraction artifacts to fix
+
+1. Page markers: Delete every line that is exactly <!-- page N -->.
+
+2. Image markers: Replace <!-- IMG src=FILENAME --> with ![](../images/FILENAME).
+
+3. Code blocks: Wrap ALL code, configuration file snippets, and command output
+   in fenced code blocks with language tags:
+   - C code → ```c ... ```
+   - Config files (.cfg, .scf) → ```ini ... ```
+   - Shell commands (csadm, p11tool2) → ```bash ... ```
+   - Command output → ``` ... ```
+   If unsure of language, use plain ```.
+   Rule: if it looks like code/config/output, FENCE IT. When in doubt, fence.
+
+4. Multi-column garbling (CRITICAL — pdfplumber scrambles multi-column layouts):
+   - Words merged without spaces (e.g. "InitTokenInitPin" → "InitToken InitPin")
+     → split them using context.
+   - Text from different columns interleaved into one sentence
+     → reconstruct the original sentence order.
+   - Inline code/parameter names fused into running text
+     (e.g. "the AutoLogin<key> parameter") → extract code terms and format
+     them as `code` with proper sentence structure.
+   - Repeated fragments or parameter names concatenated
+     (e.g. "Login=LoginSO=LoginUserLogin") → identify the distinct items
+     and format each correctly.
+
+5. Lists:
+   - Ordered: ensure "N. " format (digit, period, SPACE).
+     Rejoin list items that were split across lines/blanks.
+   - Unordered: convert • or other bullets to "- ".
+
+6. Tables: Convert broken table text into proper markdown tables
+   (| col | col | format). Table captions like "Table N: ..." go on their
+   own line, separated from body text by blank lines.
+
+7. Headings:
+   - Apply hierarchy: ## X. Chapter Title → ### X.Y → #### X.Y.Z
+   - If a heading is split across multiple lines, REJOIN it into one line.
+   - Ensure exactly one blank line before and after every heading.
+
+8. Page headers/footers: Strip repeated headers and footers
+   (e.g. "Document No.:", "Page N of M", "Product Version:").
+
+9. Cross-references: Keep "(p. N)" references as-is — do not remove.
+
+## Rules
+- Keep all original text in English — no translation, no summarization,
+  no commentary, no adding content that isn't in the source.
+- Preserve ALL technical meaning. When reconstructing garbled text,
+  the meaning must match the source intent.
+- After writing, RE-READ your output and verify:
+  (a) no code is unfenced, (b) no merged words remain,
+  (c) no split headings, (d) no split list items.
+
+Do NOT modify the _source.md file. Only create the output file.
 ```
 
 **要点说明**：
 
 - 页标记 `<!-- page N -->` 仅在 `_source.md` 中有意义——它表示原始 PDF 的页边界。格式化后的文档不需要这些标记，直接删除整行即可。
 - 图标记 `<!-- IMG src=xxx -->` 转为标准 Markdown 图片语法。因为 `ChX.md` 位于 `chapters/` 子目录，图片路径用 `../images/xxx`。
+- **代码块 fencing**：技术文档里代码、配置文件、命令输出随处可见，必须用围栏代码块包裹，否则裸文本不可读。判断不准时倾向于加围栏（"When in doubt, fence"）。
+- **多栏乱序修复**：pdfplumber 处理多栏排版时会把不同列的文字交错、相邻单词粘连、行内代码融入正文。这是格式化中最需要判断力的部分——subagent 必须根据上下文识别并重建原始语句。
+- **自检环节**：subagent 写完后必须回读自己的输出，验证四项基本检查（代码是否 fenced、粘连词是否拆分、标题是否完整、列表项是否合并）。
 - Subagent 只负责格式整理，不翻译、不增删实质性内容。
 
 ### 格式化后验证
