@@ -1,199 +1,342 @@
 ---
 name: travel-planner
 description: >-
-  Plan multi-day travel itineraries by orchestrating real-time inventory from
-  the flyai skill (Fliggy). Use whenever the user wants to plan, draft, or
-  optimize a trip spanning one or more days -- "plan a 3-day Tokyo trip",
-  "帮我做个京都5天行程", "weekend getaway to Sanya", "5月带家人去日本预算8000".
-  It delegates flight/hotel/train/POI searches to flyai and synthesizes results
-  into a day-by-day itinerary with bookings, budget, and checklist, rendered as
-  a self-contained HTML travel guide. Trigger even when the user doesn't say
-  "plan" -- if they describe a multi-element trip (transport + stay + things to
-  do) across multiple days, this applies. Do NOT use for single isolated
-  searches ("find a flight Beijing→Shanghai", "search a hotel in Hangzhou") --
-  let flyai handle those directly.
+  Plan, draft, map, and iteratively refine multi-day trips by orchestrating
+  real-time inventory from the flyai skill (Fliggy). Use whenever the user
+  describes a trip with multiple elements such as transport, lodging, places,
+  food, dates, or a budget, even when they do not explicitly say "plan". Start
+  with a coordinate-backed candidate map and POI briefing, discuss the rough
+  area-by-area plan with the user, then produce and continuously revise a
+  detailed self-contained HTML guide with markers, popup cards, bookings,
+  budget, and checklist. Do NOT use for one isolated lookup such as "find one
+  flight" or "search one hotel"; let flyai handle those directly.
 ---
 
 # Travel Planner
 
-Compose multi-day itineraries by gathering real-time inventory through the
-**flyai** skill, then synthesizing the results into a cohesive, bookable trip
-plan rendered as HTML.
+Build multi-day itineraries as a collaboration, not a one-shot answer. Gather
+real inventory with **flyai**, place candidate locations on a map, explain the
+choices, agree on the broad shape of the trip, and only then commit to a
+detailed timeline. Keep the generated HTML as the living plan throughout the
+conversation.
 
 ## Prerequisites
 
-This skill depends on the **flyai** skill for all travel inventory. Both the
-CLI binary and the skill's parameter docs are required -- the CLI runs the
-searches, the skill's `references/*.md` tell you the exact flags each
-subcommand accepts.
+This skill depends on flyai for travel inventory and booking data.
 
-1. **Install flyai CLI**: `npm i -g @fly-ai/flyai-cli`
-2. **Install flyai skill**: `npx skills add alibaba-flyai/flyai-skill`
-3. **Verify**: `flyai keyword-search --query "things to do in Sanya"` should
-   return JSON.
-4. **(Optional) API key** for enhanced results:
+1. Install the CLI: `npm i -g @fly-ai/flyai-cli`
+2. Install the flyai skill: `npx skills add alibaba-flyai/flyai-skill`
+3. Verify: `flyai keyword-search --query "things to do in Sanya"`
+4. Optional enhanced results:
    `flyai config set FLYAI_API_KEY "your-key"`
 
-Before planning a trip, run `command -v flyai` and confirm you can read the
-flyai skill's `references/` directory. If either is missing, print the install
-commands above and stop -- do not proceed with fabricated data.
+Before planning, run `command -v flyai` and confirm that the flyai skill's
+`references/` directory is readable. If either is missing, print the install
+commands and stop. Never replace unavailable inventory with invented data.
 
-## The split -- who does what
+## Ownership boundaries
 
-This skill does NOT search travel inventory itself. It orchestrates.
+| Layer | Owner | Responsibility |
+| --- | --- | --- |
+| Inventory | flyai | Prices, schedules, availability, booking links, POI/hotel images, and any coordinates returned by the provider |
+| Enrichment | travel-planner | Normalize records, resolve missing coordinates, validate images, classify candidates, and preserve source provenance |
+| Collaboration | travel-planner + user | Review candidate markers, choose priorities, agree on pace and area allocation, and resolve tradeoffs |
+| Synthesis | travel-planner | Sequence confirmed places, attach transport and stays, calculate budget, and maintain the HTML guide |
 
-| Layer             | Owner                       | Responsibility                                                                                                                    |
-| ----------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Data**          | flyai                       | Execute `flyai <subcommand>`, return JSON with real prices, schedules, availability, booking links, image URLs                    |
-| **Orchestration** | travel-planner (this skill) | Parse the trip request → decide which flyai calls to make, with what params, in what order → merge results into a day-by-day plan |
-| **Synthesis**     | travel-planner              | Cluster POIs geographically, sequence days, attach stays, slot transport, total budget, render HTML                               |
+Do not write a competing flight/hotel/POI search implementation. The planner
+decides what to query and how to combine the results; flyai executes inventory
+queries.
 
-The core insight: flyai is a query executor -- give it structured params, get
-JSON back. travel-planner is the brain that decides _which_ queries to run,
-_how_ to parameterize them, and _how_ to weave the results into a coherent
-itinerary. Neither layer leaks into the other.
+## Interaction model
+
+Use these stages in order. The two user checkpoints are important because they
+prevent a polished but unwanted itinerary from becoming expensive to unwind.
+
+```
+requirements
+  -> inventory + coordinate/image enrichment
+  -> candidate markers + POI briefing
+  -> CHECKPOINT 1: user selects priorities
+  -> rough area-by-area plan
+  -> CHECKPOINT 2: user agrees on shape and pace
+  -> initial detailed HTML
+  -> discuss -> revise data + HTML -> discuss -> ...
+```
+
+If the user explicitly asks for an immediate full plan, still perform marker
+and area checks internally, then deliver the initial detailed HTML in the same
+turn. Label assumptions and invite targeted revisions instead of blocking.
 
 ## Workflow
 
 ### 1. Parse the request
 
-Extract from the user's natural-language request:
+Extract:
 
-- **Destination(s)** -- city or region
-- **Origin** -- departure city (needed for transport search)
-- **Dates** -- specific dates or a range; resolve relative dates ("next
-  weekend", "Labor Day") by running `date +%Y-%m-%d` to anchor today
-- **Trip length** -- number of days
-- **Travelers** -- count, type (solo / couple / family / group / business)
-- **Budget** -- total or per-person, currency
-- **Preferences** -- pace (relaxed / packed), interests (nature / history /
-  food / shopping), lodging style (hotel / homestay / Marriott), transport
-  mode (flight / train)
+- destination(s) and origin(s)
+- exact dates or date range
+- traveler count and type
+- total or per-person budget and currency
+- pace and interests
+- lodging preferences
+- preferred transport modes
+- fixed commitments, must-visit places, and hard exclusions
+- desired output path, when supplied
 
-Ask only about **blocking** unknowns -- usually origin and dates. Pick
-sensible defaults for non-blocking prefs and state your assumptions. Don't
-over-interview.
+Resolve relative dates by running `date +%Y-%m-%d`. Ask only about blocking
+unknowns such as origin or dates. Choose conservative defaults for everything
+else and state them.
 
-### 2. Gather data via flyai
+### 2. Gather inventory with flyai
 
-Flyai provides eight subcommands. **Before constructing any command, read the
-corresponding `references/<cmd>.md` inside the flyai skill** -- parameters
-differ per subcommand and guessing produces broken calls.
+Before every flyai command, read its current `references/<cmd>.md`; do not
+guess flags or copy parameter tables into this skill.
 
-Choose subcommands by phase:
+Use discovery commands for fuzzy requests:
 
-**Discovery phase** (user request is fuzzy -- no fixed dates, unclear
-destination, exploratory):
+| Command | Use |
+| --- | --- |
+| `ai-search` | Multi-element exploratory intent |
+| `keyword-search` | Cross-category products, events, SIMs, packages, or unusual requests |
 
-| Subcommand       | When                                                                                                                                         |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ai-search`      | Complex intent in one shot: "3-day Hangzhou trip for Labor Day, budget 2000, stay near West Lake". Handles hotels + flights + POIs together. |
-| `keyword-search` | Cross-category discovery: visas, SIM cards, cruises, events, packages -- things that don't fit a single structured subcommand.               |
+Use structured commands when dates and cities are known:
 
-**Booking phase** (dates are fixed, you need structured, filterable results):
+| Command | Use |
+| --- | --- |
+| `search-flight` | Flights and filters |
+| `search-train` | Trains and seat classes |
+| `search-hotel` | General hotels |
+| `search-poi` | Attractions, food, districts, and activities |
+| `search-marriott-hotel` | Marriott portfolio only |
+| `search-marriott-package` | Marriott packages and experiences |
 
-| Subcommand                | What it finds                                                                                   |
-| ------------------------- | ----------------------------------------------------------------------------------------------- |
-| `search-flight`           | Flights origin→dest, filterable by cabin, price, time, duration, direct/connecting              |
-| `search-train`            | Train tickets origin→dest, same filter set, seat class                                          |
-| `search-hotel`            | Hotels by destination, filterable by star, bed type, price, nearby POI                          |
-| `search-poi`              | Attractions by city, filterable by category (nature / history / theme park / …) and level (1–5) |
-| `search-marriott-hotel`   | Marriott Group hotels specifically                                                              |
-| `search-marriott-package` | Marriott bundled deals (afternoon tea, spa, etc.)                                               |
+Parallelize independent hotel, transport, and POI queries. Search enough POIs
+to give the user meaningful choices: include likely scheduled places and a
+smaller set of credible alternatives rather than only the first N results.
 
-**Parallelize independent calls.** Hotels, POIs, and transport searches have
-no data dependency on each other -- fire them in the same turn. Example for
-"Tokyo 3-day trip departing Shanghai, July 18-20":
+### 3. Normalize and enrich map records
 
+Convert every candidate location into this shared data contract. The map,
+attraction cards, hotel cards, and timeline must all refer to the same `id`.
+
+```js
+{
+  id: "asakusa-sensoji",
+  name: "浅草寺",
+  type: "attraction",        // attraction | food | lodging | transport
+  status: "candidate",       // candidate | scheduled | optional
+  day: null,                 // integer after scheduling
+  lat: 35.7148,
+  lng: 139.7967,
+  address: "东京都台东区浅草2-3-1",
+  district: "浅草",
+  hours: "06:00-17:00",
+  duration: "约1.5小时",
+  description: "东京最古老的寺院和仲见世商店街。",
+  image: "https://...",
+  price: "免费",
+  bookingUrl: "https://...",
+  source: "flyai",
+  coordinateSource: "flyai | nominatim | verified-manual",
+  imageSource: "flyai | official | commons"
+}
 ```
-# These three are independent -- run together
-flyai search-flight --origin "Shanghai" --destination "Tokyo" --dep-date 2026-07-18 ...
-flyai search-hotel  --dest-name "Tokyo" --check-in-date 2026-07-18 --check-out-date 2026-07-20 ...
-flyai search-poi    --city-name "Tokyo" --category "地标建筑" ...
-```
 
-**Don't repeat flyai's parameter docs here.** Read the flyai skill's
-`references/<cmd>.md` every time -- flyai may update flags between versions,
-and this skill must stay version-agnostic.
+Rules:
 
-### 3. Synthesize
+- IDs are stable slugs. Do not change them when a POI moves to another day.
+- `candidate` markers are gray; `scheduled` markers use day colors;
+  `optional` markers remain gray/dashed.
+- Preserve source fields so later revisions can distinguish verified data from
+  editorial notes.
+- Never emit `[0,0]`, a city-center placeholder, or guessed coordinates. Omit
+  an unresolved marker and list it in the map status instead.
 
-Once flyai returns JSON for each call:
+#### Coordinate acquisition
 
-1. **Cluster POIs geographically** -- group attractions by district / transit
-   zone so each day covers one area, minimizing backtracking.
-2. **Sequence days** -- order the clusters into a route that flows naturally
-   (e.g., Day 1: Shibuya/Harajuku → Day 2: Asakusa/Akihabara → Day 3:
-   Ginza/Tokyo Station).
-3. **Attach transport legs** -- slot the flight/train at the start and end of
-   the trip; add intra-city transit notes between POI clusters.
-4. **Attach stays** -- place the hotel near the Day 1 cluster or the transit
-   hub; note check-in/out times.
-5. **Total the budget** -- sum real flyai numbers: flight price × travelers,
-   hotel rate × nights, POI ticket prices, plus a food/contingency estimate
-   (clearly labeled as an estimate, not from flyai).
-6. **Extract booking links** -- every flyai result with `jumpUrl` or
-   `detailUrl` becomes a `[Click to book](url)` link in the output.
+Resolve coordinates during generation, never through browser-side bulk
+geocoding.
 
-### 4. Render HTML
+1. Inspect the actual flyai JSON for coordinate-like fields (`lat`/`lng`,
+   `latitude`/`longitude`, or a structured location). Normalize numeric strings
+   and validate latitude `[-90,90]` and longitude `[-180,180]`.
+2. If coordinates are absent, query a geocoder with the most specific string
+   available: `POI name + full address + district + city + country`.
+3. For public Nominatim, use
+   `https://nominatim.openstreetmap.org/search` with `format=jsonv2`, `limit=3`,
+   `addressdetails=1`, and an appropriate `countrycodes` filter. Send an
+   identifiable User-Agent, use one thread, stay below one request per second,
+   and cache each normalized query. Do not use Nominatim for autocomplete.
+4. Compare returned `display_name`, city, district, and country before choosing
+   a result. If ambiguous, search the venue's official address or ask the user
+   instead of selecting the first match blindly.
+5. Record `coordinateSource`. Reuse cached results on later revisions.
 
-Produce a self-contained HTML file using
-`references/travel-guide-template.html` as the canonical structure. The
-template defines these sections -- fill them all:
+Public Nominatim and OSM tile services are community infrastructure. Keep the
+provider swappable, honor their current policies, and avoid bulk/offline tile
+downloads.
 
-| Section            | Source data                                                                                                   |
-| ------------------ | ------------------------------------------------------------------------------------------------------------- |
-| Hero header        | Trip title, destination, dates, traveler count                                                                |
-| Route overview     | Ordered list of areas visited across all days                                                                 |
-| Daily itinerary    | Per-day timeline: transport → lodging → food → attractions, with times, prices, durations                     |
-| Accommodation grid | Hotels from flyai `search-hotel` / `search-marriott-hotel`, with `mainPic` image and `detailUrl` booking link |
-| Food grid          | Restaurants discovered via `search-poi` (category matches) or `keyword-search`                                |
-| Attractions grid   | POIs from `search-poi`, with `picUrl` image and `jumpUrl` booking link                                        |
-| Budget table       | Itemized: transport, lodging, food, tickets, other -- with flyai-sourced prices and labeled estimates         |
-| Checklist          | Travel docs, packing, reminders -- standard travel checklist adapted to destination                           |
-| References         | Useful links (official tourism sites, transit sites) -- these are editorial, not from flyai                   |
+#### Image acquisition
 
-Save as `itinerary-<destination>-<N>d.html` (e.g.,
-`itinerary-tokyo-3d.html`).
+Use this priority order:
 
-### Image and booking-link display rules
+1. flyai `picUrl` for POIs or `mainPic` for hotels
+2. another flyai/Fliggy result for the exact same entity
+3. the venue or official tourism site's representative image
+4. a clearly licensed Wikimedia Commons image
 
-Inherited from flyai's output conventions -- apply them in the HTML:
+Do not reuse a vaguely related photo to fill a blank card. Validate every
+chosen URL with an actual request and, for the final HTML, verify that the image
+has non-zero rendered dimensions. Store `imageSource`. Render remote images
+with `loading="lazy"`, descriptive `alt`, `referrerpolicy="no-referrer"` when
+the image host requires it, and a graceful `onerror` fallback that hides the
+image area instead of showing a broken icon.
 
-- **Hotel image**: use `mainPic` field → `![](mainPic)`
-- **Other images** (flights, POIs): use `picUrl` field → `![](picUrl)`
-- **Hotel booking link**: use `detailUrl` → `[Click to book](detailUrl)`
-- **Other booking links** (flights, POIs): use `jumpUrl` → `[Click to book](jumpUrl)`
-- **Platform hint**: if flyai returned `systemMessage`, display it at the end
+### 4. Marker-first candidate review
+
+Before assigning detailed times:
+
+1. Render or update the template's map using all coordinate-backed candidates.
+2. Group the same records into a compact POI catalog by district.
+3. Introduce each candidate in one or two useful lines: why visit, typical
+   duration, opening constraint, price, and any booking requirement.
+4. Separate strong recommendations from optional alternatives. Do not imply
+   that every marker will fit.
+5. Ask the user which places are must-do, optional, or unwanted, and whether
+   the geographic spread matches their expectations.
+
+Use the Question tool when available. Keep the checkpoint decision-oriented;
+do not ask the user to re-enter facts already supplied.
+
+### 5. Discuss the rough plan
+
+After checkpoint 1, cluster confirmed POIs geographically and propose the broad
+shape of the trip:
+
+- one primary district or connected corridor per day
+- hotel/base location and major inbound/outbound legs
+- relaxed versus packed alternatives when there is a real tradeoff
+- fixed-date constraints, closing days, event times, and bad-weather fallback
+- candidates that were omitted and why
+
+Present the proposed day-to-area allocation without pretending exact times are
+settled. Ask for confirmation or focused changes. This is checkpoint 2.
+
+### 6. Produce the initial detailed plan
+
+Once the rough plan is accepted:
+
+1. Sequence each day's confirmed POIs to minimize backtracking.
+2. Add realistic travel buffers and meal/rest windows.
+3. Attach flights/trains at the trip edges and lodging to every night.
+4. Check opening hours, closed days, event dates, check-in/out, and departure
+   buffers before locking times.
+5. Total flyai prices × travelers/nights. Clearly label food, local transit,
+   and contingency estimates that do not come from flyai.
+6. Surface every available `jumpUrl`/`detailUrl` as a booking link.
+7. Render the initial HTML using
+   `references/travel-guide-template.html`.
+
+Save as `itinerary-<destination>-<N>d.html`, unless the user supplied a path.
+
+### 7. Continue the planning loop
+
+Treat the first detailed plan as version 1, not the end of the conversation.
+For every later user change:
+
+1. identify affected POIs, days, transport, budget, and map layers
+2. preserve unrelated user decisions
+3. update the shared POI records first
+4. regenerate marker colors/status, cards, timeline, route overview, and budget
+5. validate the whole HTML
+6. summarize what changed and surface the next consequential decision
+
+Overwrite the same HTML path so the user always has one current guide. Create
+versioned copies only when explicitly requested.
+
+## HTML template contract
+
+`references/travel-guide-template.html` is canonical. Fill these sections:
+
+| Section | Source |
+| --- | --- |
+| Hero | title, destination, dates, travelers, budget |
+| Weather | current forecast or clearly labeled seasonal guidance |
+| Route overview | agreed day-to-area sequence |
+| Interactive map | normalized `MAP_POIS` records with valid coordinates |
+| Daily itinerary | scheduled records and transport moves |
+| Accommodation | hotel records, images, prices, booking links |
+| Food | restaurant records and reservation notes |
+| Attractions | candidate/scheduled records; cards use `data-poi-id` |
+| Budget | flyai totals plus labeled estimates |
+| Checklist | destination-specific preparation |
+| References | official tourism, transit, venue, map, and booking sources |
+
+### Map behavior
+
+- Use Leaflet 1.9.4 and `https://tile.openstreetmap.org/{z}/{x}/{y}.png`.
+- Keep the visible OpenStreetMap contributor attribution; do not hide it.
+- Do not prefetch or package tiles for offline use.
+- Fit to valid marker bounds with padding and a reasonable `maxZoom`; if there
+  is one point, center on it; if there are none, hide the map and show why.
+- Do not cluster by default. When markers overlap, clicking one should expand
+  the colocated markers radially so each remains selectable.
+- Legend controls toggle scheduled days, candidates, hotels, and transport.
+- A fullscreen button uses the browser Fullscreen API and calls
+  `map.invalidateSize()` after the size transition.
+- Clicking a POI/hotel card with `data-poi-id` focuses its marker and opens the
+  same popup card. Keyboard Enter/Space must do the same.
+
+### Popup card format
+
+Use one escaped `buildPopup(record)` implementation for every marker. Keep the
+field order stable:
+
+1. representative image (when valid)
+2. status/day and type badges
+3. name
+4. address
+5. opening hours and suggested duration
+6. concise description
+7. price and important note
+8. booking/detail link
+
+Escape all text and validate URLs before inserting record data into HTML. Open
+external links with `target="_blank" rel="noopener noreferrer"`.
+
+## Validation before delivery
+
+- every scheduled POI has one stable ID used by map, card, and timeline
+- every marker has finite, in-range coordinates and a recorded source
+- unresolved places are reported and omitted, not guessed
+- every image URL was requested and final rendered images are nonblank
+- popup fields are escaped and external URLs use safe protocols
+- OSM attribution is visible
+- cards open the matching marker by mouse and keyboard
+- exact-overlap expansion, legend toggles, fullscreen, and fitBounds work
+- no duplicate IDs, broken labels, JavaScript syntax errors, or console errors
+- desktop and mobile screenshots show a nonblank map without overlap
+- prices, schedules, availability, and booking links remain traceable to flyai
 
 ## Hard rules
 
-- **Never fabricate prices, schedules, or availability.** Every concrete
-  number (flight price, hotel rate, ticket cost, departure time) must come
-  from a flyai JSON response. If flyai returned nothing for a search, say so
-  in the output and offer alternatives -- don't invent data to fill the
-  template.
-- **Cite flyai as the source.** Include "基于 fly.ai 实时数据" in the output.
-- **Surface booking links.** If flyai returned `jumpUrl` / `detailUrl`, they
-  must appear as clickable links in the HTML -- that's the whole point of
-  using a real inventory source instead of the model's memory.
-- **Read the right reference doc before each flyai call.** `search-flight`
-  and `search-train` have very different flag sets; reusing one for the
-  other fails. Open `references/<cmd>.md` inside the flyai skill each time.
-- **Parallelise independent flyai calls** -- don't run hotels, POIs, and
-  flights sequentially when they have no data dependency.
-- **Anchor relative dates.** Run `date +%Y-%m-%d` when the user says "next
-  weekend", "Labor Day", "May" -- never assume today's date.
-- **Label estimates as estimates.** Food costs, contingency budgets, and
-  intra-city transit fares that didn't come from flyai must be clearly
-  marked as estimates in the budget table.
+- Never fabricate price, schedule, availability, coordinates, opening hours,
+  or image provenance.
+- Include "基于 fly.ai 实时数据" in the guide.
+- Read live flyai command references before each call.
+- Parallelize independent inventory calls, but geocode sequentially when the
+  provider policy requires it.
+- Label estimates explicitly.
+- Preserve the user's confirmed decisions across iterations.
+- Do not jump from raw search results directly to a polished detailed plan
+  unless the user explicitly asks to skip discussion.
 
-## What NOT to do
+## What not to do
 
-- Don't write your own flight/hotel/POI search logic -- that's flyai's job.
-- Don't copy flyai's parameter tables into this skill -- they'll drift. Read
-  the live `references/*.md` from the flyai skill instead.
-- Don't trigger on single-search requests. "Find a flight Beijing→Shanghai"
-  is flyai's domain, not a multi-day itinerary. Let flyai handle it.
-- Don't proceed if flyai is missing. Print the install commands from the
-  Prerequisites section and stop.
+- Do not trigger for one isolated flight, train, hotel, or attraction lookup.
+- Do not copy flyai parameter tables into this skill.
+- Do not geocode repeatedly in the generated browser page.
+- Do not use placeholder coordinates or unrelated stock images.
+- Do not hide candidates merely because they did not enter the first draft;
+  keep useful alternatives as gray optional markers.
+- Do not end after writing version 1 when the user is still discussing changes.
